@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { JobPost, RoleCategory, TimezoneOverlap, CompensationType, ROLE_CATEGORY_LABELS, UserAccount } from '../types';
-import { JobFilterPillBar, FilterState, INITIAL_FILTER_STATE } from './JobFilterPillBar';
+import { JobFilterBar, FilterState, INITIAL_FILTER_STATE } from './JobFilterPillBar';
 import { 
   Search, 
   MapPin, 
@@ -409,68 +409,21 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
             <Zap className="w-4 h-4" /> Post Opportunity (Verified Client)
           </button>
         </div>
-
-        {/* Filter Toolbar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-slate-700/60">
-          
-          {/* Search Box */}
-          <div className="relative col-span-1 sm:col-span-2 md:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search roles, tools (Zendesk, Canva, Notion)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800/90 border border-slate-600 text-xs text-white placeholder-slate-400 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-
-          {/* Expanded Role Category Selection */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-slate-800/90 border border-slate-600 text-xs text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            <option value="all">All Role Categories ({jobs.length})</option>
-            {Object.entries(ROLE_CATEGORY_LABELS).map(([catKey, label]) => (
-              <option key={catKey} value={catKey}>{label}</option>
-            ))}
-          </select>
-
-          {/* Timezone */}
-          <select
-            value={selectedTimezone}
-            onChange={(e) => setSelectedTimezone(e.target.value)}
-            className="bg-slate-800/90 border border-slate-600 text-xs text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            <option value="all">All Timezones / Overlaps</option>
-            <option value="EST (UTC-5)">EST (UTC-5)</option>
-            <option value="PST (UTC-8)">PST (UTC-8)</option>
-            <option value="GMT/BST (UTC+0)">GMT/BST (UTC+0)</option>
-            <option value="CET (UTC+1)">CET (UTC+1)</option>
-            <option value="SGT/PHT (UTC+8)">SGT/PHT (UTC+8)</option>
-            <option value="Flexible / Async">Flexible / Async</option>
-          </select>
-
-          {/* Comp Type */}
-          <select
-            value={selectedCompType}
-            onChange={(e) => setSelectedCompType(e.target.value)}
-            className="bg-slate-800/90 border border-slate-600 text-xs text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            <option value="all">All Compensation Types</option>
-            <option value="paid_stipend">Paid Monthly Stipend</option>
-            <option value="hourly_rate">Hourly Paid Mentorship</option>
-          </select>
-
-        </div>
       </div>
 
-      {/* REUSABLE PILL FILTER BAR (MATCHING USER DEMO DESIGN) */}
+      {/* Compact Clean Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <JobFilterPillBar
+        <JobFilterBar
           filters={pillFilters}
           setFilters={setPillFilters}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          selectedTimezone={selectedTimezone}
+          onTimezoneChange={setSelectedTimezone}
+          selectedCompType={selectedCompType}
+          onCompTypeChange={setSelectedCompType}
           totalResultsCount={filteredJobs.length}
           onReset={() => {
             setPillFilters(INITIAL_FILTER_STATE);
@@ -507,10 +460,14 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
       {/* Job Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
         {filteredJobs.length === 0 ? (
-          <div className="col-span-full bg-white rounded-2xl p-10 text-center border border-slate-200 space-y-3">
-            <Briefcase className="w-10 h-10 text-slate-400 mx-auto" />
-            <h3 className="font-bold text-slate-800 text-base">No job listings match your filter criteria</h3>
-            <p className="text-xs text-slate-500">Try adjusting your role category or keyword search filters.</p>
+          <div className="col-span-full bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mx-auto font-bold border border-teal-200">
+              <Briefcase className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-slate-900 text-base">No jobs available yet</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Check back soon for new opportunities.
+            </p>
           </div>
         ) : (
           filteredJobs.map(job => (

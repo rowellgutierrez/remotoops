@@ -47,7 +47,7 @@ export default function App() {
   const [scamReports, setScamReports] = useState<ScamReport[]>([]);
 
   // Application Data State
-  const [jobs, setJobs] = useState<JobPost[]>(INITIAL_JOBS);
+  const [jobs, setJobs] = useState<JobPost[]>([]);
   const [candidates] = useState<CandidateProfile[]>(INITIAL_CANDIDATES);
   const [posts, setPosts] = useState<FeedPost[]>(INITIAL_FEED);
   const [applications, setApplications] = useState<Application[]>(INITIAL_APPLICATIONS);
@@ -273,10 +273,40 @@ export default function App() {
     }
   };
 
-  // Handlers
-  const handleAddJob = (newJob: JobPost) => {
-    setJobs([newJob, ...jobs]);
+  // Handlers & Job Persistence
+  const handleAddJob = async (newJob: JobPost) => {
+    setJobs(prev => [newJob, ...prev]);
+    try {
+      await setDoc(doc(db, 'job_posts', newJob.id), {
+        ...newJob,
+        postedBy: currentUser?.id || 'anonymous',
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Firestore job creation error:", err);
+    }
   };
+
+  // Fetch job posts from Firestore collection 'job_posts' on startup
+  useEffect(() => {
+    const fetchJobsFromFirestore = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'job_posts'));
+        const firestoreJobs: JobPost[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          firestoreJobs.push({ id: d.id, ...data } as JobPost);
+        });
+
+        // Set strictly real jobs retrieved from Firestore (no fake fallback)
+        setJobs(firestoreJobs);
+      } catch (err) {
+        console.warn("[App] Notice fetching jobs from Firestore:", err);
+      }
+    };
+
+    fetchJobsFromFirestore();
+  }, []);
 
   // Sync user's saved jobs and applications from Firestore
   useEffect(() => {

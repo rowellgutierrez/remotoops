@@ -672,7 +672,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <UserCheck className="w-4 h-4 text-teal-400" />
-                {loading ? 'Authenticating with Firebase...' : 'Log In to Account'}
+                {loading ? 'Logging in...' : 'Log In to Account'}
               </button>
             </form>
           )}
@@ -857,7 +857,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
               >
                 <UserCheck className="w-4 h-4 text-teal-400" />
-                {loading ? 'Creating Firebase Account...' : 'Register & Send Email Verification'}
+                {loading ? 'Registering account...' : 'Register & Send Email Verification'}
               </button>
 
             </form>

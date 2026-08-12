@@ -31,7 +31,7 @@ export const PortalSection: React.FC<PortalSectionProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'applications' | 'messages'>('applications');
   const [msgInput, setMsgInput] = useState('');
-  const [activeMentorNote, setActiveMentorNote] = useState<{ [appId: string]: string }>({});
+  const [selectedApplicant, setSelectedApplicant] = useState<Application | null>(null);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,9 +156,17 @@ export const PortalSection: React.FC<PortalSectionProps> = ({
                   </div>
                 )}
 
-                {/* Client Status Update Actions (When viewed in Client mode) */}
+                {/* Client Actions & Candidate Details Trigger */}
                 {userType === 'client' && (
                   <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      onClick={() => setSelectedApplicant(app)}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5"
+                    >
+                      <User className="w-3.5 h-3.5 text-teal-400" />
+                      View Full Candidate Profile & Details
+                    </button>
+
                     <div className="flex items-center gap-2 text-xs">
                       <span className="font-bold text-slate-700">Update Status:</span>
                       <button
@@ -236,6 +244,69 @@ export const PortalSection: React.FC<PortalSectionProps> = ({
               <Send className="w-3.5 h-3.5" /> Send
             </button>
           </form>
+        </div>
+      )}
+
+      {/* APPLICANT DETAILS MODAL FOR EMPLOYERS */}
+      {selectedApplicant && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <img
+                  src={selectedApplicant.candidateAvatar}
+                  alt={selectedApplicant.candidateName}
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-200"
+                />
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">{selectedApplicant.candidateName}</h3>
+                  <p className="text-xs text-teal-700 font-bold">{selectedApplicant.candidateEmail}</p>
+                  <p className="text-[11px] text-slate-500">Applied for: {selectedApplicant.jobTitle}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedApplicant(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
+                <p className="font-bold text-slate-900">Cover Pitch & Application Note:</p>
+                <p className="text-slate-700 italic leading-relaxed">"{selectedApplicant.coverPitch}"</p>
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-900 mb-1">Practiced Software Tools:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedApplicant.toolExperience.map((tool, idx) => (
+                    <span key={idx} className="bg-teal-50 text-teal-800 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-teal-200">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-100 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-indigo-700 uppercase font-extrabold block">Application Status</span>
+                  <span className="font-bold text-slate-900 text-xs">{selectedApplicant.status}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    onSendDirectMessage(`Hi ${selectedApplicant.candidateName}! We saw your application for ${selectedApplicant.jobTitle} on RemotoOps...`, selectedApplicant.candidateName);
+                    setSelectedApplicant(null);
+                    setActiveTab('messages');
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition-colors"
+                >
+                  Message Applicant
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
