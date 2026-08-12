@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "User accounts and profile metadata for job seekers, employers, and admins",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["jobseeker", "employer", "candidate", "client", "admin"] },
+        "emailVerified": { "type": "boolean" },
+        "verificationStatus": { "type": "string", "enum": ["incomplete", "pending", "verified", "rejected", "changes_required"] },
+        "verificationNotes": { "type": "string" },
+        "isProfileVerified": { "type": "boolean" },
+        "isEmployerVerified": { "type": "boolean" },
+        "isKycVerified": { "type": "boolean" },
+        "isNoExperienceBeginner": { "type": "boolean" },
+        "phoneNumber": { "type": "string" },
+        "location": { "type": "string" },
+        "professionalTitle": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "education": { "type": "array" },
+        "experiences": { "type": "array" },
+        "workExperience": { "type": "string" },
+        "resumeUrl": { "type": "string" },
+        "portfolioUrl": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "companyName": { "type": "string" },
+        "companyWebsite": { "type": "string" },
+        "companyDescription": { "type": "string" },
+        "businessLocation": { "type": "string" },
+        "contactName": { "type": "string" },
+        "companyPhone": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" },
+        "subscriptionPlan": { "type": "string" },
+        "status": { "type": "string", "default": "active" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "applications": {
+      "title": "Applications",
+      "description": "Job applications submitted by verified jobseekers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobId": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "company": { "type": "string" },
+        "candidateId": { "type": "string" },
+        "candidateName": { "type": "string" },
+        "candidateEmail": { "type": "string" },
+        "candidateAvatar": { "type": "string" },
+        "candidatePhone": { "type": "string" },
+        "coverPitch": { "type": "string" },
+        "toolExperience": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["applied", "under_review", "intro_chat", "shortlisted", "interview", "accepted", "declined", "hired"] },
+        "appliedAt": { "type": "string" },
+        "applicationType": { "type": "string", "enum": ["direct", "external_click"] },
+        "externalUrl": { "type": "string" }
+      },
+      "required": ["jobId", "candidateId"]
+    },
+    "saved_jobs": {
+      "title": "Saved Jobs",
+      "description": "Jobs saved by jobseekers to apply later",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "jobId": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "company": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "location": { "type": "string" },
+        "compensation": { "type": "string" },
+        "jobStatus": { "type": "string" },
+        "savedAt": { "type": "string" },
+        "applicationMethod": { "type": "string" },
+        "externalApplyUrl": { "type": "string" }
+      },
+      "required": ["userId", "jobId"]
+    },
+    "verification_requests": {
+      "title": "Verification Requests",
+      "description": "Account and employer verification requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "requestedAt"]
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "description": "Payment link purchases and plan subscriptions tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "plan": { "type": "string" },
+        "amountPhp": { "type": "number" },
+        "amountUsd": { "type": "number" },
+        "reference": { "type": "string" },
+        "paymongoLink": { "type": "string" },
+        "status": { "type": "string", "enum": ["PAID", "PENDING", "ACTIVE"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "plan", "amountPhp"]
+    },
+    "job_posts": {
+      "title": "Job Posts",
+      "description": "Job listings posted by employers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientTitle": { "type": "string" },
+        "clientAvatar": { "type": "string" },
+        "clientLocation": { "type": "string" },
+        "roleCategory": { "type": "string" },
+        "compensation": { "type": "string" },
+        "compensationType": { "type": "string" },
+        "hoursPerWeek": { "type": "string" },
+        "timezone": { "type": "string" },
+        "description": { "type": "string" },
+        "requiredTools": { "type": "array", "items": { "type": "string" } },
+        "featured": { "type": "boolean" },
+        "applicationMethod": { "type": "string", "enum": ["direct", "external"] },
+        "externalApplyUrl": { "type": "string" },
+        "jobStatus": { "type": "string", "enum": ["OPEN", "CLOSING_SOON", "CLOSED", "FILLED", "EXPIRED"] },
+        "experienceLevelNum": { "type": "string" },
+        "isOpenToZeroExperience": { "type": "boolean" },
+        "viewsCount": { "type": "number" },
+        "savesCount": { "type": "number" },
+        "applicationsCount": { "type": "number" },
+        "postedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "company"]
+    },
+    "activity_logs": {
+      "title": "Activity Logs",
+      "description": "System login, account creation, and subscription audit events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["action", "timestamp"]
+    }
+  }
+}

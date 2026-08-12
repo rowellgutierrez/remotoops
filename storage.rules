@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // User profile pictures, cover banners, resumes, and portfolios
+    match /users/{userId}/{allPaths=**} {
+      // Anyone can read public user media (profile pictures / banners)
+      allow read: if true;
+      
+      // Only the account owner or admin can upload, replace, or delete files in their folder
+      allow write, delete: if request.auth != null && (
+        request.auth.uid == userId ||
+        (request.auth.token.keys().hasAll(['admin']) && request.auth.token.admin == true)
+      );
+    }
+
+    // Default deny for all other paths unless authenticated admin
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && (request.auth.token.keys().hasAll(['admin']) && request.auth.token.admin == true);
+    }
+  }
+}

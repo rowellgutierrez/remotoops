@@ -1,0 +1,6 @@
+{
+  "name": "RemotoOps",
+  "description": "Global remote mentorship and job platform for Executive Assistants, Admin & Support Operations, and Social Media Managers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
