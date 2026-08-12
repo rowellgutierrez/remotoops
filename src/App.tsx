@@ -197,6 +197,15 @@ export default function App() {
   }, []);
 
   // API Call Helpers targeting server/serverless endpoints
+  const safeParseJsonResponse = async (res: Response) => {
+    try {
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch {
+      return { success: false, error: 'AI service is temporarily unavailable.' };
+    }
+  };
+
   const handleEnhanceJobWithAI = async (jobData: any) => {
     try {
       const res = await fetch('/api/ai/enhance-job', {
@@ -204,16 +213,16 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(jobData)
       });
-      const json = await res.json();
+      const json = await safeParseJsonResponse(res);
       if (res.ok && json.success) return json;
       return {
         success: false,
-        error: json.error || 'AI service is temporarily unavailable. Please try again.'
+        error: json.error || 'AI service is temporarily unavailable.'
       };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
-        error: err.message || 'AI service is temporarily unavailable. Please try again.'
+        error: 'AI service is temporarily unavailable.'
       };
     }
   };
@@ -229,16 +238,16 @@ export default function App() {
           userBackground: background || 'Career starter looking for remote mentorship'
         })
       });
-      const json = await res.json();
+      const json = await safeParseJsonResponse(res);
       if (res.ok && json.success) return json;
       return {
         success: false,
-        error: json.error || 'AI service is temporarily unavailable. Please try again.'
+        error: json.error || 'AI service is temporarily unavailable.'
       };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
-        error: err.message || 'AI service is temporarily unavailable. Please try again.'
+        error: 'AI service is temporarily unavailable.'
       };
     }
   };
@@ -250,16 +259,16 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roleType, experienceLevel })
       });
-      const json = await res.json();
+      const json = await safeParseJsonResponse(res);
       if (res.ok && json.success) return json;
       return {
         success: false,
-        error: json.error || 'AI service is temporarily unavailable. Please try again.'
+        error: json.error || 'AI service is temporarily unavailable.'
       };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
-        error: err.message || 'AI service is temporarily unavailable. Please try again.'
+        error: 'AI service is temporarily unavailable.'
       };
     }
   };

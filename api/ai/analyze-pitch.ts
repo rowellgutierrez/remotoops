@@ -1,14 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getGeminiClient } from '../lib/gemini';
+import { generateGeminiJson, GeminiParseError } from '../lib/gemini';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Content-Type', 'application/json');
+
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   }
 
   try {
-    const { targetRole, userBackground, userPitch, toolExperience } = req.body || {};
-    const ai = getGeminiClient();
+    const body = req.body || {};
+    const { targetRole, userBackground, userPitch, toolExperience } = body;
 
     const prompt = `You are an executive hiring manager and remote operations mentor evaluating a candidate's pitch/application for an entry-level/internship remote role.
 
@@ -27,21 +29,22 @@ Return JSON matching this schema:
   "recommendedSkillBadge": "string"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(response.text || "{}");
-    return res.status(200).json({ success: true, data: parsed });
+    const data = await generateGeminiJson(prompt);
+    return res.status(200).json({ success: true, data });
   } catch (error: any) {
     console.error("Error in /api/ai/analyze-pitch:", error);
+
+    if (error instanceof GeminiParseError || error?.name === 'GeminiParseError') {
+      return res.status(502).json({
+        success: false,
+        error: "Gemini returned an invalid response.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
-      error: error.message || "AI service is temporarily unavailable. Please try again.",
+      error: "AI service is temporarily unavailable.",
     });
   }
 }
+

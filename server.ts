@@ -1,8 +1,8 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { generateGeminiJson, GeminiParseError } from "./api/lib/gemini";
 
 dotenv.config();
 
@@ -11,22 +11,6 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
-// Initialize Gemini Client Lazily/Safely
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured in environment.");
-  }
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
-  });
-}
-
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: "RemotoOps API" });
@@ -34,9 +18,9 @@ app.get("/api/health", (req, res) => {
 
 // AI Endpoint 1: Enhance Client Job Listing for Mentorship-Driven Internships
 app.post("/api/ai/enhance-job", async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
-    const { title, company, roleType, rawDescription, mentorshipGoals } = req.body;
-    const ai = getGeminiClient();
+    const { title, company, roleType, rawDescription, mentorshipGoals } = req.body || {};
 
     const prompt = `You are a remote workplace expert and mentorship architect specializing in Executive Assistant, Administrative Operations, and Social Media Management roles.
 Enhance and structure this job posting for a mentorship-driven remote internship for entry-level professionals.
@@ -63,30 +47,30 @@ Please return a detailed JSON response matching this schema:
   "interviewTipForApplicants": "string"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(response.text || "{}");
-    res.json({ success: true, data: parsed });
+    const data = await generateGeminiJson(prompt);
+    res.json({ success: true, data });
   } catch (error: any) {
     console.error("Error in /api/ai/enhance-job:", error);
+
+    if (error instanceof GeminiParseError || error?.name === 'GeminiParseError') {
+      return res.status(502).json({
+        success: false,
+        error: "Gemini returned an invalid response.",
+      });
+    }
+
     res.status(500).json({
       success: false,
-      error: error.message || "Failed to generate AI job enhancements.",
+      error: "AI service is temporarily unavailable.",
     });
   }
 });
 
 // AI Endpoint 2: Pitch & Cover Letter Feedback for Entry-Level Applicants
 app.post("/api/ai/analyze-pitch", async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
-    const { targetRole, userBackground, userPitch, toolExperience } = req.body;
-    const ai = getGeminiClient();
+    const { targetRole, userBackground, userPitch, toolExperience } = req.body || {};
 
     const prompt = `You are an executive hiring manager and remote operations mentor evaluating a candidate's pitch/application for an entry-level/internship remote role.
 
@@ -105,30 +89,30 @@ Return JSON matching this schema:
   "recommendedSkillBadge": "string"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(response.text || "{}");
-    res.json({ success: true, data: parsed });
+    const data = await generateGeminiJson(prompt);
+    res.json({ success: true, data });
   } catch (error: any) {
     console.error("Error in /api/ai/analyze-pitch:", error);
+
+    if (error instanceof GeminiParseError || error?.name === 'GeminiParseError') {
+      return res.status(502).json({
+        success: false,
+        error: "Gemini returned an invalid response.",
+      });
+    }
+
     res.status(500).json({
       success: false,
-      error: error.message || "Failed to analyze candidate pitch.",
+      error: "AI service is temporarily unavailable.",
     });
   }
 });
 
 // AI Endpoint 3: Interactive Interview Prep Simulation
 app.post("/api/ai/interview-prep", async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
   try {
-    const { roleType, experienceLevel } = req.body;
-    const ai = getGeminiClient();
+    const { roleType, experienceLevel } = req.body || {};
 
     const prompt = `Generate a set of 3 scenario-based interview questions and structured STAR answer frameworks specifically for a remote ${roleType || "Executive Assistant"} (${experienceLevel || "Entry-level/Mentorship Candidate"}).
 
@@ -153,23 +137,23 @@ Return JSON matching this schema:
       "proTip": "string"
     }
   ]
-} drop JSON formatting markers`;
+}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const parsed = JSON.parse(response.text || "{}");
-    res.json({ success: true, data: parsed });
+    const data = await generateGeminiJson(prompt);
+    res.json({ success: true, data });
   } catch (error: any) {
     console.error("Error in /api/ai/interview-prep:", error);
+
+    if (error instanceof GeminiParseError || error?.name === 'GeminiParseError') {
+      return res.status(502).json({
+        success: false,
+        error: "Gemini returned an invalid response.",
+      });
+    }
+
     res.status(500).json({
       success: false,
-      error: error.message || "Failed to generate interview prep.",
+      error: "AI service is temporarily unavailable.",
     });
   }
 });
