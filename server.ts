@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { generateGeminiJson, GeminiParseError } from "./api/lib/gemini";
+import { generateGeminiJson, GeminiParseError } from "./api/lib/gemini.js";
 
 dotenv.config();
 
