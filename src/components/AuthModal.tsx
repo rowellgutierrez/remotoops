@@ -100,9 +100,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       case 'auth/too-many-requests':
         return 'Too many requests or failed attempts. Please wait a few minutes before trying again.';
       case 'auth/unauthorized-domain':
-        return 'Domain not authorized in Firebase Console (https://remotoops.ai.studio). Please authorize it under Authentication > Settings > Authorized Domains.';
+        return 'Domain authentication configuration is in progress. Please contact support or try again shortly.';
       case 'auth/operation-not-allowed':
-        return 'Email/Password sign-in is not enabled in Firebase Console.';
+        return 'Sign-in method is temporarily unavailable. Please try again later.';
       default:
         return err.message || 'Authentication error occurred. Please check your details and try again.';
     }
@@ -498,7 +498,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? 'Enter your registered email to receive a password reset link.'
               : mode === 'verification_sent'
               ? 'We sent a verification link to your email inbox. Please verify before applying.'
-              : 'Log in using your registered Firebase Authentication email & password.'}
+              : 'Welcome back. Log in to continue.'}
           </p>
 
           {/* Mode Tabs */}
@@ -576,7 +576,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                  {loading ? 'Checking Firebase Status...' : "I've Verified My Email"}
+                  {loading ? 'Checking Verification Status...' : "I've Verified My Email"}
                 </button>
 
                 <button

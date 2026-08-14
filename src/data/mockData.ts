@@ -549,6 +549,142 @@ export const MENTORSHIP_MODULES: MentorshipModule[] = [
         recommendedTools: ['Zendesk', 'Intercom', 'Grammarly']
       }
     ]
+  },
+  {
+    id: 'mod-admin-1',
+    title: 'Asana Project Tracking & Notion SOP Architecture',
+    roleCategory: 'admin_ops',
+    duration: '2 Weeks Self-Paced',
+    description: 'Learn how to build company operating hubs, write clear standard operating procedures (SOPs), and organize cross-functional sprint boards.',
+    skillsLearned: ['Notion Knowledge Base Setup', 'Asana Board Workflows', 'SOP Documentation', 'Loom Video Walkthroughs'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Drafting Standard Operating Procedures (SOPs)',
+        details: 'Writing step-by-step guides with screenshots and conditional rules so anyone can execute standard business processes.',
+        practicalTask: 'Write a 1-page SOP document for client onboarding and create a 2-minute Loom walkthrough.',
+        recommendedTools: ['Notion', 'Loom', 'Google Docs']
+      }
+    ]
+  },
+  {
+    id: 'mod-data-1',
+    title: 'B2B Lead List Building & LinkedIn Research',
+    roleCategory: 'data_lead_gen',
+    duration: '1 Week Self-Paced',
+    description: 'Master prospect research, Boolean search strings, contact enrichment, and clean CRM database entry.',
+    skillsLearned: ['LinkedIn Boolean Search', 'Lead Scraping & Verification', 'Google Sheets Data Cleansing', 'CRM Data Hygiene'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Prospect Discovery & Data Verification',
+        details: 'Finding verified decision-makers using targeted industry filters and validating business email domains.',
+        practicalTask: 'Build a spreadsheet of 25 verified tech founders with verified LinkedIn URLs and email addresses.',
+        recommendedTools: ['LinkedIn Sales Navigator', 'Hunter.io', 'Google Sheets']
+      }
+    ]
+  },
+  {
+    id: 'mod-creative-1',
+    title: 'Brand Visual Assets & Figma Design Basics',
+    roleCategory: 'creative_design',
+    duration: '2 Weeks Self-Paced',
+    description: 'Create high-converting social graphics, pitch deck slides, and marketing banners using modern visual hierarchy rules.',
+    skillsLearned: ['Figma Layout Grids', 'Typography & Color Theory', 'Marketing Banner Design', 'Asset Export Optimization'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Social Ad Creative Production',
+        details: 'Designing responsive banners for Facebook, LinkedIn, and Instagram adhering to brand guidelines.',
+        practicalTask: 'Create a cohesive 3-size ad visual set in Figma for a remote SaaS product.',
+        recommendedTools: ['Figma', 'Canva Pro', 'Unsplash']
+      }
+    ]
+  },
+  {
+    id: 'mod-tech-1',
+    title: 'WordPress, Webflow & CMS Operations',
+    roleCategory: 'tech_web_ops',
+    duration: '2 Weeks Self-Paced',
+    description: 'Learn basic CMS website updates, publishing SEO blog posts, domain management, and form routing.',
+    skillsLearned: ['WordPress Gutenberg Editor', 'Webflow CMS Management', 'Basic On-Page SEO', 'Zapier Automation'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Content Publishing & On-Page SEO Checklist',
+        details: 'Formatting articles, setting alt tags, crafting meta descriptions, and configuring internal links.',
+        practicalTask: 'Format and publish a sample 1,000-word article on a demo WordPress or Webflow site.',
+        recommendedTools: ['WordPress', 'Webflow', 'Yoast SEO']
+      }
+    ]
+  },
+  {
+    id: 'mod-content-1',
+    title: 'SEO Article Writing & Email Newsletter Craft',
+    roleCategory: 'content_writing',
+    duration: '2 Weeks Self-Paced',
+    description: 'Write engaging blog posts, B2B thought leadership articles, and weekly subscriber newsletters that retain readers.',
+    skillsLearned: ['Headline Copywriting', 'SEO Keyword Integration', 'Email Newsletter Structure', 'Substack/Beehiiv Setup'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Crafting High-Converting Email Newsletters',
+        details: 'Structuring engaging intros, value-packed body sections, and clear call-to-action buttons.',
+        practicalTask: 'Write a 400-word industry roundup newsletter with 3 curated links and a strong opening hook.',
+        recommendedTools: ['Substack', 'Grammarly', 'Hemingway App']
+      }
+    ]
+  },
+  {
+    id: 'mod-ecom-1',
+    title: 'Shopify Product Management & Basic Bookkeeping',
+    roleCategory: 'ecom_bookkeeping',
+    duration: '2 Weeks Self-Paced',
+    description: 'Master Shopify catalog management, inventory level tracking, customer order fulfillment, and QuickBooks receipt sorting.',
+    skillsLearned: ['Shopify Store Admin', 'Order Fulfillment Workflows', 'Receipt Reconciliation', 'Excel Pivot Tables'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Catalog Upload & Variant Configuration',
+        details: 'Adding SKUs, uploading product photos, writing descriptions, and setting inventory alerts.',
+        practicalTask: 'Set up 5 mock products with 3 variant options each on a Shopify development store.',
+        recommendedTools: ['Shopify Admin', 'Excel', 'QuickBooks Online']
+      }
+    ]
+  },
+  {
+    id: 'mod-comm-1',
+    title: 'Discord & Community Moderation Best Practices',
+    roleCategory: 'community_mod',
+    duration: '1 Week Self-Paced',
+    description: 'Learn community rule enforcement, onboarding new members, running engagement events, and handling spam.',
+    skillsLearned: ['Discord Server Management', 'Automod Configuration', 'Member Onboarding', 'Conflict De-escalation'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Server Moderation & Safety Bots',
+        details: 'Configuring bot rules, spam filters, role permissions, and welcoming channels.',
+        practicalTask: 'Set up role verification and welcome automation in a sandbox Discord server.',
+        recommendedTools: ['Discord', 'MEE6 Bot', 'Carl-bot']
+      }
+    ]
+  },
+  {
+    id: 'mod-general-1',
+    title: 'Universal Remote Work Foundations & Async Etiquette',
+    roleCategory: 'general',
+    duration: '1 Week Self-Paced',
+    description: 'Master asynchronous communication, Slack etiquette, Loom updates, time tracking, and remote security practices.',
+    skillsLearned: ['Async Communication Protocols', 'Slack Etiquette', 'Password Managers (1Password/Bitwarden)', 'Time Blocking'],
+    steps: [
+      {
+        stepNumber: 1,
+        title: 'Effective Asynchronous Status Updates',
+        details: 'Writing daily standups, blocking distractions, and recording concise screen recordings.',
+        practicalTask: 'Draft a daily 3-bullet async update and a 60-second video demo for a team lead.',
+        recommendedTools: ['Slack', 'Loom', 'Toggl Track']
+      }
+    ]
   }
 ];
 

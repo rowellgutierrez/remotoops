@@ -1,73 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import logoImg from './assets/images/remotoops_logo_1786167434166.jpg';
-import { JobPost, CandidateProfile, FeedPost, Application, DirectMessage, UserAccount, ScamReport } from './types';
+import { JobPost, Application, DirectMessage, UserAccount, ScamReport, SavedSearch } from './types';
 import { 
-  INITIAL_JOBS, 
-  INITIAL_CANDIDATES, 
-  INITIAL_FEED, 
-  INITIAL_APPLICATIONS 
-} from './data/mockData';
-import { auth, db, setDoc, doc, getDoc, getDocs, onSnapshot, collection, onAuthStateChanged, signOut, where, query, deleteDoc } from './lib/firebase';
-import { Header } from './components/Header';
-import { FeedSection } from './components/FeedSection';
+  auth, 
+  db, 
+  setDoc, 
+  doc, 
+  getDocs, 
+  onSnapshot, 
+  collection, 
+  onAuthStateChanged, 
+  signOut, 
+  where, 
+  query, 
+  deleteDoc 
+} from './lib/firebase';
+
+import { Sidebar } from './components/Sidebar';
+import { Header, AppTab } from './components/Header';
 import { JobsSection } from './components/JobsSection';
-import { TalentSection } from './components/TalentSection';
-import { MentorshipHub } from './components/MentorshipHub';
-import { PortalSection } from './components/PortalSection';
-import { PostJobModal } from './components/PostJobModal';
-import { AuthModal } from './components/AuthModal';
-import { AntiScamHub } from './components/AntiScamHub';
-import { ReportScamModal } from './components/ReportScamModal';
+import { SavedJobsSection } from './components/SavedJobsSection';
+import { SavedSearchesSection } from './components/SavedSearchesSection';
+import { MyApplicationsSection } from './components/MyApplicationsSection';
+import { EmployerSection } from './components/EmployerSection';
+import { MessagesSection } from './components/MessagesSection';
 import { ATSResumeSection } from './components/ATSResumeSection';
 import { InterviewGuideSection } from './components/InterviewGuideSection';
+import { AntiScamHub } from './components/AntiScamHub';
+import { PostJobModal } from './components/PostJobModal';
+import { AuthModal } from './components/AuthModal';
+import { ReportScamModal } from './components/ReportScamModal';
 import { EmployerPricingModal } from './components/EmployerPricingModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { KYCVerificationModal } from './components/KYCVerificationModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { ExternalLinkWarningModal } from './components/ExternalLinkWarningModal';
+import { X } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'jobs' | 'ats_resume' | 'interview_prep' | 'anti_scam' | 'mentorship' | 'talent' | 'portal' | 'feed'>('jobs');
+  const [activeTab, setActiveTab] = useState<AppTab>('find_jobs');
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Auth User State - Starts as null for public guest experience
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
 
+  // Global Modals
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [isEmployerPricingOpen, setIsEmployerPricingOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [externalLinkTarget, setExternalLinkTarget] = useState<{ url: string; jobTitle?: string; company?: string } | null>(null);
 
   // Scam Report Modal State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportJobData, setReportJobData] = useState<{ id?: string; title?: string; company?: string }>({});
-  const [scamReports, setScamReports] = useState<ScamReport[]>([]);
 
-  // Application Data State
+  // Core Collections State
   const [jobs, setJobs] = useState<JobPost[]>([]);
-  const [candidates] = useState<CandidateProfile[]>(INITIAL_CANDIDATES);
-  const [posts, setPosts] = useState<FeedPost[]>(INITIAL_FEED);
-  const [applications, setApplications] = useState<Application[]>(INITIAL_APPLICATIONS);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [messages, setMessages] = useState<DirectMessage[]>([
     {
-      id: 'msg-1',
+      id: 'msg-welcome',
       conversationId: 'conv-1',
       senderId: 'client-1',
-      receiverId: 'cand-1',
-      senderName: 'Sarah Jenkins (Apex Global)',
-      senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      text: 'Hi Alex! We reviewed your application and love your Google Calendar SOP. Let’s schedule a remote intro chat!',
-      timestamp: '2 hours ago'
+      receiverId: 'user-me',
+      senderName: 'Apex Global Hiring Team',
+      senderAvatar: '',
+      text: 'Hello! Thank you for applying through RemotoOps. We review remote applications within 24-48 hours.',
+      timestamp: 'Today at 10:00 AM'
     }
   ]);
 
-  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
-
-  // Auth State Listener using Firebase Auth with real-time Firestore profile sync
+  // Auth State Listener with real-time Firestore profile sync
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
 
@@ -82,14 +93,10 @@ export default function App() {
           const idTokenResult = await firebaseUser.getIdTokenResult().catch(() => null);
           const isAdminClaim = idTokenResult?.claims?.admin === true;
 
-          // Call reload to ensure we have fresh user properties from Firebase Auth
           await firebaseUser.reload().catch((rErr) => console.warn("[App] User reload notice:", rErr));
-
-          console.log(`[App] Auth state changed. User: ${firebaseUser.email} | emailVerified: ${firebaseUser.emailVerified}`);
 
           const userDocRef = doc(db, 'users', firebaseUser.uid);
 
-          // Real-time listener so changes (avatar, cover, profile updates) persist immediately across sessions & tabs
           unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
             if (userSnap.exists()) {
               const userData = userSnap.data();
@@ -101,8 +108,7 @@ export default function App() {
                 name: userData.displayName || userData.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
                 email: firebaseUser.email || '',
                 role: isAdmin ? 'admin' : (userData.role === 'employer' || userData.role === 'client' ? 'client' : 'candidate'),
-                avatar: userData.avatar || userData.photoURL || firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-                coverImage: userData.coverImage || userData.coverPhoto || userData.coverUrl || '',
+                avatar: userData.avatar || '',
                 headline: isAdmin ? 'RemotoOps Super Admin' : (userData.headline || 'Member'),
                 location: userData.location || 'Remote Worldwide',
                 phoneNumber: userData.phoneNumber,
@@ -136,24 +142,20 @@ export default function App() {
                 lastLoginAt: userData.lastLoginAt || new Date().toISOString()
               });
             } else {
-              // Document doesn't exist yet, construct basic fallback
               const isAdmin = isAdminClaim;
               const isVerified = firebaseUser.emailVerified || isAdmin;
 
-              const fallbackUser: UserAccount = {
+              setCurrentUser({
                 id: firebaseUser.uid,
                 name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
                 email: firebaseUser.email || '',
                 role: isAdmin ? 'admin' : 'candidate',
-                avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-                coverImage: '',
                 headline: isAdmin ? 'RemotoOps Super Admin' : 'Jobseeker',
                 location: 'Remote Worldwide',
                 emailVerified: isVerified,
                 verificationStatus: 'incomplete',
                 status: 'active'
-              };
-              setCurrentUser(fallbackUser);
+              });
             }
           }, (err) => {
             console.error("Firestore user doc listener notice:", err);
@@ -168,9 +170,7 @@ export default function App() {
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeDoc) {
-        unsubscribeDoc();
-      }
+      if (unsubscribeDoc) unsubscribeDoc();
     };
   }, []);
 
@@ -182,52 +182,92 @@ export default function App() {
     }
     setCurrentUser(null);
   };
+
+  // Fetch job posts from Firestore collection 'job_posts'
   useEffect(() => {
-    const seedFirestore = async () => {
-      if (!auth.currentUser) return;
-      const idTokenResult = await auth.currentUser.getIdTokenResult().catch(() => null);
-      const isAdminUser = idTokenResult?.claims?.admin === true;
-      if (!isAdminUser) {
-        const userDocRef = doc(db, 'users', auth.currentUser.uid);
-        const userSnap = await getDoc(userDocRef).catch(() => null);
-        if (userSnap?.data()?.role !== 'admin') return;
-      }
-
+    const fetchJobsFromFirestore = async () => {
       try {
-        const snap = await getDocs(collection(db, 'users'));
-        if (snap.empty) {
-          const initialUsers = [
-            {
-              id: auth.currentUser.uid,
-              email: auth.currentUser.email || '',
-              displayName: auth.currentUser.displayName || 'Super Admin',
-              role: 'admin',
-              createdAt: new Date().toISOString(),
-              lastLoginAt: new Date().toISOString(),
-              subscriptionPlan: 'Super Admin',
-              companyName: 'RemotoOps Platform',
-              status: 'active',
-              isKycVerified: true
-            }
-          ];
-
-          for (const u of initialUsers) {
-            await setDoc(doc(db, 'users', u.id), u, { merge: true });
-          }
+        const snap = await getDocs(collection(db, 'job_posts'));
+        const firestoreJobs: JobPost[] = [];
+        snap.forEach(d => {
+          firestoreJobs.push({ id: d.id, ...d.data() } as JobPost);
+        });
+        if (firestoreJobs.length > 0) {
+          setJobs(firestoreJobs);
         }
       } catch (err) {
-        // Suppress initial seed permission logs for non-admin or unauthenticated states
+        console.warn("[App] Notice fetching jobs from Firestore:", err);
       }
     };
 
-    seedFirestore();
+    fetchJobsFromFirestore();
   }, []);
 
-  // API Call Helpers targeting server/serverless endpoints
+  // Sync user's saved jobs, saved searches, and applications from Firestore
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const fetchUserData = async () => {
+      try {
+        // Fetch saved jobs
+        const savedQ = query(collection(db, 'saved_jobs'), where('userId', '==', currentUser.id));
+        const savedSnap = await getDocs(savedQ);
+        const ids: string[] = [];
+        savedSnap.forEach(d => {
+          const data = d.data() as { jobId?: string };
+          if (data && data.jobId) ids.push(data.jobId);
+        });
+        setSavedJobIds(Array.from(new Set(ids)));
+
+        // Fetch saved searches
+        const searchQ = query(collection(db, 'saved_searches'), where('userId', '==', currentUser.id));
+        const searchSnap = await getDocs(searchQ);
+        const searchesList: SavedSearch[] = [];
+        searchSnap.forEach(d => {
+          searchesList.push({ id: d.id, ...d.data() } as SavedSearch);
+        });
+        setSavedSearches(searchesList);
+
+        // Fetch applications
+        const appsQ = query(collection(db, 'applications'), where('candidateId', '==', currentUser.id));
+        const appsSnap = await getDocs(appsQ);
+        const userApps: Application[] = [];
+        appsSnap.forEach(d => {
+          userApps.push({ id: d.id, ...d.data() } as Application);
+        });
+        setApplications(userApps);
+      } catch (err) {
+        console.warn("[App] Notice fetching user data:", err);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser?.id]);
+
+  // AI helper functions
   const safeParseJsonResponse = async (res: Response) => {
     try {
       const text = await res.text();
       return JSON.parse(text);
+    } catch {
+      return { success: false, error: 'AI service is temporarily unavailable.' };
+    }
+  };
+
+  const handleAnalyzePitchWithAI = async (targetRole: string, draftPitch: string) => {
+    try {
+      const res = await fetch('/api/ai/analyze-pitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetRole,
+          userPitch: draftPitch,
+          userBackground: 'Remote candidate applying via RemotoOps'
+        })
+      });
+      const json = await safeParseJsonResponse(res);
+      if (res.ok && json.success) return json;
+      return { success: false, error: json.error || 'AI service is temporarily unavailable.' };
     } catch {
       return { success: false, error: 'AI service is temporarily unavailable.' };
     }
@@ -242,65 +282,13 @@ export default function App() {
       });
       const json = await safeParseJsonResponse(res);
       if (res.ok && json.success) return json;
-      return {
-        success: false,
-        error: json.error || 'AI service is temporarily unavailable.'
-      };
+      return { success: false, error: json.error || 'AI service is temporarily unavailable.' };
     } catch {
-      return {
-        success: false,
-        error: 'AI service is temporarily unavailable.'
-      };
+      return { success: false, error: 'AI service is temporarily unavailable.' };
     }
   };
 
-  const handleAnalyzePitchWithAI = async (targetRole: string, draftPitch: string, background?: string) => {
-    try {
-      const res = await fetch('/api/ai/analyze-pitch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetRole,
-          userPitch: draftPitch,
-          userBackground: background || 'Career starter looking for remote mentorship'
-        })
-      });
-      const json = await safeParseJsonResponse(res);
-      if (res.ok && json.success) return json;
-      return {
-        success: false,
-        error: json.error || 'AI service is temporarily unavailable.'
-      };
-    } catch {
-      return {
-        success: false,
-        error: 'AI service is temporarily unavailable.'
-      };
-    }
-  };
-
-  const handleGenerateInterviewPrep = async (roleType: string, experienceLevel: string) => {
-    try {
-      const res = await fetch('/api/ai/interview-prep', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleType, experienceLevel })
-      });
-      const json = await safeParseJsonResponse(res);
-      if (res.ok && json.success) return json;
-      return {
-        success: false,
-        error: json.error || 'AI service is temporarily unavailable.'
-      };
-    } catch {
-      return {
-        success: false,
-        error: 'AI service is temporarily unavailable.'
-      };
-    }
-  };
-
-  // Handlers & Job Persistence
+  // Job actions
   const handleAddJob = async (newJob: JobPost) => {
     setJobs(prev => [newJob, ...prev]);
     try {
@@ -313,69 +301,6 @@ export default function App() {
       console.error("Firestore job creation error:", err);
     }
   };
-
-  // Fetch job posts from Firestore collection 'job_posts' on startup
-  useEffect(() => {
-    const fetchJobsFromFirestore = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'job_posts'));
-        const firestoreJobs: JobPost[] = [];
-        snap.forEach(d => {
-          const data = d.data();
-          firestoreJobs.push({ id: d.id, ...data } as JobPost);
-        });
-
-        // Set strictly real jobs retrieved from Firestore (no fake fallback)
-        setJobs(firestoreJobs);
-      } catch (err) {
-        console.warn("[App] Notice fetching jobs from Firestore:", err);
-      }
-    };
-
-    fetchJobsFromFirestore();
-  }, []);
-
-  // Sync user's saved jobs and applications from Firestore
-  useEffect(() => {
-    if (!currentUser?.id) return;
-
-    const fetchUserData = async () => {
-      try {
-        // Fetch saved jobs
-        const savedQ = query(collection(db, 'saved_jobs'), where('userId', '==', currentUser.id));
-        const savedSnap = await getDocs(savedQ);
-        const ids: string[] = [];
-        savedSnap.forEach(d => {
-          const data = d.data() as { jobId?: string };
-          if (data && data.jobId) ids.push(data.jobId);
-        });
-        if (ids.length > 0) {
-          setSavedJobIds(prev => Array.from(new Set([...prev, ...ids])));
-        }
-
-        // Fetch applications
-        const appsQ = query(collection(db, 'applications'), where('candidateId', '==', currentUser.id));
-        const appsSnap = await getDocs(appsQ);
-        const userApps: Application[] = [];
-        appsSnap.forEach(d => {
-          const data = d.data() || {};
-          userApps.push({ id: d.id, ...data } as Application);
-        });
-        if (userApps.length > 0) {
-          setApplications(prev => {
-            const combined = [...userApps, ...prev];
-            const uniqueMap = new Map();
-            combined.forEach(a => uniqueMap.set(a.id, a));
-            return Array.from(uniqueMap.values());
-          });
-        }
-      } catch (err) {
-        console.warn("[App] Notice fetching user data:", err);
-      }
-    };
-
-    fetchUserData();
-  }, [currentUser?.id]);
 
   const handleToggleSaveJob = async (job: JobPost) => {
     if (savedJobIds.includes(job.id)) {
@@ -397,9 +322,9 @@ export default function App() {
             jobId: job.id,
             jobTitle: job.title,
             company: job.company,
-            companyLogo: job.companyLogo,
+            companyLogo: job.companyLogo || '',
             compensation: job.compensation,
-            location: job.clientLocation,
+            location: job.clientLocation || '100% Remote',
             jobStatus: job.jobStatus || 'OPEN',
             savedAt: new Date().toISOString()
           }, { merge: true });
@@ -410,19 +335,45 @@ export default function App() {
     }
   };
 
-  const handleApplyToJob = async (job: JobPost, pitch: string, tools: string[]) => {
+  const handleSaveSearch = async (searchName: string, queryText: string, filters: any) => {
+    if (!currentUser?.id) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    const searchId = `search_${Date.now()}`;
+    const newSearch: SavedSearch = {
+      id: searchId,
+      userId: currentUser.id,
+      name: searchName,
+      query: queryText,
+      filters: filters || {},
+      notificationFrequency: 'daily',
+      createdAt: new Date().toISOString()
+    };
+
+    setSavedSearches(prev => [newSearch, ...prev]);
+
+    try {
+      await setDoc(doc(db, 'saved_searches', searchId), newSearch);
+    } catch (err) {
+      console.error("Save search error:", err);
+    }
+  };
+
+  const handleDeleteSavedSearch = async (searchId: string) => {
+    setSavedSearches(prev => prev.filter(s => s.id !== searchId));
+    try {
+      await deleteDoc(doc(db, 'saved_searches', searchId));
+    } catch (err) {
+      console.error("Delete saved search error:", err);
+    }
+  };
+
+  const handleApplyToJob = async (job: JobPost, pitch: string, tools: string[], candidateDetails?: any) => {
     const isExternal = job.applicationMethod === 'external';
     const now = new Date().toISOString();
     const candidateId = currentUser ? currentUser.id : 'user-me';
-
-    // Prevent duplicate application
-    const existing = applications.find(
-      a => a.jobId === job.id && (a.candidateId === candidateId || a.candidateEmail === currentUser?.email)
-    );
-    if (existing) {
-      console.warn("User already applied to job:", job.id);
-      return;
-    }
 
     const appId = `${candidateId}_${job.id}`;
     const newApp: Application = {
@@ -431,9 +382,13 @@ export default function App() {
       jobTitle: job.title,
       company: job.company,
       candidateId: candidateId,
-      candidateName: currentUser ? (currentUser.name || currentUser.displayName || 'Member') : 'Alex Rivers',
-      candidateAvatar: currentUser ? currentUser.avatar : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      candidateEmail: currentUser ? currentUser.email : 'alex.rivers@remotoops.dev',
+      candidateName: candidateDetails?.name || currentUser?.name || 'Member',
+      candidateEmail: candidateDetails?.email || currentUser?.email || 'member@remotoops.dev',
+      candidatePhone: candidateDetails?.phone || currentUser?.phoneNumber,
+      candidateLocation: candidateDetails?.location || currentUser?.location,
+      resumeUrl: candidateDetails?.resumeUrl || currentUser?.resumeUrl,
+      portfolioUrl: candidateDetails?.portfolioUrl || currentUser?.portfolioUrl,
+      linkedinUrl: candidateDetails?.linkedinUrl || currentUser?.linkedinUrl,
       coverPitch: pitch,
       toolExperience: tools,
       status: 'applied',
@@ -442,12 +397,7 @@ export default function App() {
       externalUrl: isExternal ? job.externalApplyUrl : undefined
     };
 
-    setApplications(prev => {
-      if (prev.some(a => a.id === appId || (a.jobId === job.id && a.candidateId === candidateId))) {
-        return prev;
-      }
-      return [newApp, ...prev];
-    });
+    setApplications(prev => [newApp, ...prev.filter(a => a.id !== appId)]);
 
     if (currentUser?.id) {
       try {
@@ -461,141 +411,321 @@ export default function App() {
     }
   };
 
-  const handleUpdateAppStatus = (appId: string, status: Application['status'], notes?: string) => {
-    setApplications(prev =>
-      prev.map(app => (app.id === appId ? { ...app, status, mentorNotes: notes || app.mentorNotes } : app))
-    );
-  };
-
-  const handleSendDirectMessage = (text: string, receiverName: string) => {
+  const handleSendMessage = (text: string, receiverId: string, receiverName: string, conversationId = 'conv-1') => {
     const newMsg: DirectMessage = {
       id: `msg-${Date.now()}`,
-      conversationId: `conv-${Date.now()}`,
+      conversationId,
       senderId: currentUser ? currentUser.id : 'user-me',
-      receiverId: 'receiver-1',
-      senderName: currentUser ? currentUser.name : 'Alex Rivers',
-      senderAvatar: currentUser ? currentUser.avatar : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      receiverId,
+      senderName: currentUser ? currentUser.name : 'Applicant',
+      senderAvatar: '',
       text,
       timestamp: 'Just now'
     };
-    setMessages([...messages, newMsg]);
+    setMessages(prev => [...prev, newMsg]);
   };
 
-  const handleOpenReportModal = (jobId?: string, jobTitle?: string, company?: string) => {
-    setReportJobData({ id: jobId, title: jobTitle, company });
-    setIsReportModalOpen(true);
+  const handleUpdateApplicationStatus = async (appId: string, status: Application['status'], notes?: string) => {
+    setApplications(prev => prev.map(a => a.id === appId ? { ...a, status, mentorNotes: notes || a.mentorNotes } : a));
+    try {
+      await setDoc(doc(db, 'applications', appId), {
+        status,
+        mentorNotes: notes,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Error updating application status:", err);
+    }
   };
 
-  const handleSubmitReport = (report: ScamReport) => {
-    setScamReports([report, ...scamReports]);
+  const handleToggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans">
+    <div className={`min-h-screen flex font-sans transition-colors ${
+      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       
-      {/* Top Bar Header */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        currentUser={currentUser}
-        onOpenAuthModal={(mode) => {
-          setAuthModalMode(mode || 'login');
-          setIsAuthModalOpen(true);
-        }}
-        onLogout={handleLogout}
-        onOpenPostJob={() => setIsPostJobModalOpen(true)}
-        onOpenPricingModal={() => setIsEmployerPricingOpen(true)}
-        onOpenAdminConsole={() => setIsAdminDashboardOpen(true)}
-        onOpenKycModal={() => setIsKycModalOpen(true)}
-        onOpenProfileModal={() => setIsProfileModalOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        applicationCount={applications.length}
-      />
+      {/* DESKTOP SIDEBAR */}
+      <div className="hidden md:block">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsMobileSidebarOpen(false);
+          }}
+          currentUser={currentUser}
+          savedJobsCount={savedJobIds.length}
+          savedSearchesCount={savedSearches.length}
+          applicationCount={applications.length}
+          unreadMessagesCount={messages.length > 1 ? 1 : 0}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onOpenAccountModal={() => setIsAccountModalOpen(true)}
+          onOpenAuthModal={(mode) => {
+            setAuthModalMode(mode || 'login');
+            setIsAuthModalOpen(true);
+          }}
+          onLogout={handleLogout}
+          onOpenAdminConsole={() => setIsAdminDashboardOpen(true)}
+          onOpenCareersModal={() => setActiveTab('find_jobs')}
+        />
+      </div>
 
-      {/* Main Content Body */}
-      <main className="flex-1 pb-16">
+      {/* MOBILE DRAWER SIDEBAR */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" 
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          <div className="relative flex-1 max-w-xs w-full bg-white z-50 flex flex-col shadow-2xl">
+            <div className="flex items-center justify-end p-2 border-b border-slate-100">
+              <button
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <Sidebar
+                activeTab={activeTab}
+                setActiveTab={(tab) => {
+                  setActiveTab(tab);
+                  setIsMobileSidebarOpen(false);
+                }}
+                currentUser={currentUser}
+                savedJobsCount={savedJobIds.length}
+                savedSearchesCount={savedSearches.length}
+                applicationCount={applications.length}
+                unreadMessagesCount={messages.length > 1 ? 1 : 0}
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+                onOpenAccountModal={() => {
+                  setIsAccountModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                onOpenAuthModal={(mode) => {
+                  setAuthModalMode(mode || 'login');
+                  setIsAuthModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                onLogout={handleLogout}
+                onOpenAdminConsole={() => {
+                  setIsAdminDashboardOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN LAYOUT WRAPPER (Top Header + Tab View) */}
+      <div className="flex-1 flex flex-col min-w-0">
         
-        {activeTab === 'jobs' && (
-          <JobsSection
-            jobs={jobs}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            currentUser={currentUser}
-            onOpenAuthModal={(mode) => {
-              setAuthModalMode(mode || 'login');
-              setIsAuthModalOpen(true);
-            }}
-            onApply={handleApplyToJob}
-            onOpenPostJob={() => setIsPostJobModalOpen(true)}
-            onAnalyzePitchWithAI={handleAnalyzePitchWithAI}
-            onOpenReportModal={handleOpenReportModal}
-            onOpenSafetyHub={() => setActiveTab('anti_scam')}
-            savedJobIds={savedJobIds}
-            onToggleSaveJob={handleToggleSaveJob}
-            onOpenProfileModal={() => setIsProfileModalOpen(true)}
-            onExternalApply={(job) => {
-              setExternalLinkTarget({
-                url: job.externalApplyUrl || '#',
-                jobTitle: job.title,
-                company: job.company
-              });
-            }}
-          />
-        )}
+        {/* Top Header */}
+        <Header
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentUser={currentUser}
+          onOpenAuthModal={(mode) => {
+            setAuthModalMode(mode || 'login');
+            setIsAuthModalOpen(true);
+          }}
+          onLogout={handleLogout}
+          onOpenPostJob={() => setIsPostJobModalOpen(true)}
+          onOpenAccountModal={() => setIsAccountModalOpen(true)}
+          onOpenPricingModal={() => setIsEmployerPricingOpen(true)}
+          onOpenAdminConsole={() => setIsAdminDashboardOpen(true)}
+          savedJobsCount={savedJobIds.length}
+          applicationCount={applications.length}
+          unreadMessagesCount={messages.length > 1 ? 1 : 0}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+        />
 
-        {activeTab === 'ats_resume' && (
-          <ATSResumeSection />
-        )}
+        {/* Main Content View */}
+        <main className="flex-1 pb-16">
+          
+          {/* FIND JOBS TAB */}
+          {activeTab === 'find_jobs' && (
+            <JobsSection
+              jobs={jobs}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              currentUser={currentUser}
+              onOpenAuthModal={(mode) => {
+                setAuthModalMode(mode || 'login');
+                setIsAuthModalOpen(true);
+              }}
+              onApply={handleApplyToJob}
+              onOpenPostJob={() => setIsPostJobModalOpen(true)}
+              onAnalyzePitchWithAI={handleAnalyzePitchWithAI}
+              onOpenReportModal={(id, title, company) => {
+                setReportJobData({ id, title, company });
+                setIsReportModalOpen(true);
+              }}
+              onOpenSafetyHub={() => setActiveTab('anti_scam')}
+              onOpenAccountModal={() => setIsAccountModalOpen(true)}
+              onOpenAtsResume={() => setActiveTab('ats_resume')}
+              onOpenInterviewGuide={() => setActiveTab('interview_prep')}
+              savedJobIds={savedJobIds}
+              onToggleSaveJob={handleToggleSaveJob}
+              onSaveSearch={handleSaveSearch}
+              onExternalApply={(job) => {
+                setExternalLinkTarget({
+                  url: job.externalApplyUrl || '#',
+                  jobTitle: job.title,
+                  company: job.company
+                });
+              }}
+            />
+          )}
 
-        {activeTab === 'interview_prep' && (
-          <InterviewGuideSection />
-        )}
+          {/* SAVED JOBS TAB (Fixed & Rock Solid) */}
+          {activeTab === 'saved_jobs' && (
+            <SavedJobsSection
+              savedJobIds={savedJobIds}
+              jobs={jobs}
+              allJobs={jobs}
+              onToggleSaveJob={handleToggleSaveJob}
+              onUnsaveJob={(jobId) => {
+                const match = jobs.find(j => j.id === jobId);
+                if (match) handleToggleSaveJob(match);
+                else handleToggleSaveJob({ id: jobId } as JobPost);
+              }}
+              onApplyJob={(job) => {
+                setActiveTab('find_jobs');
+              }}
+              onExploreJobs={() => setActiveTab('find_jobs')}
+              onFindJobs={() => setActiveTab('find_jobs')}
+              currentUser={currentUser}
+              onOpenAuthModal={(mode) => {
+                setAuthModalMode(mode || 'login');
+                setIsAuthModalOpen(true);
+              }}
+              isLoggedIn={!!currentUser}
+            />
+          )}
 
-        {activeTab === 'anti_scam' && (
-          <AntiScamHub onOpenReportModal={handleOpenReportModal} />
-        )}
+          {/* SAVED SEARCHES TAB */}
+          {activeTab === 'saved_searches' && (
+            <SavedSearchesSection
+              savedSearches={savedSearches}
+              onDeleteSearch={handleDeleteSavedSearch}
+              onRunSearch={(queryText) => {
+                setSearchQuery(queryText);
+                setActiveTab('find_jobs');
+              }}
+              onOpenAuthModal={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              isLoggedIn={!!currentUser}
+            />
+          )}
 
-        {activeTab === 'feed' && (
-          <FeedSection
-            posts={posts}
-            setPosts={setPosts}
-            jobs={jobs}
-            candidates={candidates}
-            onSelectJob={(job) => {
-              setActiveTab('jobs');
-            }}
-            onNavigateToMentorship={() => setActiveTab('mentorship')}
-          />
-        )}
+          {/* MY APPLICATIONS TAB */}
+          {activeTab === 'my_applications' && (
+            <MyApplicationsSection
+              applications={applications}
+              onOpenAuthModal={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              isLoggedIn={!!currentUser}
+              onFindJobs={() => setActiveTab('find_jobs')}
+            />
+          )}
 
-        {activeTab === 'talent' && (
-          <TalentSection
-            candidates={candidates}
-            onSendMessage={(candidateName) => {
-              setActiveTab('portal');
-            }}
-            onOpenEmployerPricing={() => setIsEmployerPricingOpen(true)}
-          />
-        )}
+          {/* MESSAGES TAB */}
+          {activeTab === 'messages' && (
+            <MessagesSection
+              currentUser={currentUser}
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              onOpenAuthModal={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+            />
+          )}
 
-        {activeTab === 'mentorship' && (
-          <MentorshipHub
-            onAnalyzePitch={handleAnalyzePitchWithAI}
-            onGenerateInterviewPrep={handleGenerateInterviewPrep}
-          />
-        )}
+          {/* EMPLOYERS TAB */}
+          {activeTab === 'employers' && (
+            <EmployerSection
+              currentUser={currentUser}
+              jobs={jobs}
+              applications={applications}
+              onOpenPostJob={() => setIsPostJobModalOpen(true)}
+              onOpenAuthModal={() => {
+                setAuthModalMode('login');
+                setIsAuthModalOpen(true);
+              }}
+              onUpdateApplicationStatus={handleUpdateApplicationStatus}
+            />
+          )}
 
-        {activeTab === 'portal' && (
-          <PortalSection
-            applications={applications}
-            onUpdateStatus={handleUpdateAppStatus}
-            userType={currentUser ? currentUser.role : 'candidate'}
-            messages={messages}
-            onSendDirectMessage={handleSendDirectMessage}
-          />
-        )}
-      </main>
+          {/* ATS RESUME BUILDER */}
+          {activeTab === 'ats_resume' && (
+            <ATSResumeSection />
+          )}
+
+          {/* INTERVIEW GUIDE */}
+          {activeTab === 'interview_prep' && (
+            <InterviewGuideSection />
+          )}
+
+          {/* ANTI-SCAM HUB */}
+          {activeTab === 'anti_scam' && (
+            <AntiScamHub
+              onOpenReportModal={(id, title, company) => {
+                setReportJobData({ id, title, company });
+                setIsReportModalOpen(true);
+              }}
+            />
+          )}
+
+        </main>
+
+        {/* Simplified Clean Footer */}
+        <footer className="bg-white border-t border-slate-200 text-slate-500 py-6 text-xs mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <img 
+                src={logoImg} 
+                alt="RemotoOps" 
+                referrerPolicy="no-referrer"
+                className="w-6 h-6 rounded-lg border border-teal-500/30 object-cover" 
+              />
+              <p className="font-semibold text-slate-700">
+                RemotoOps • Verified Remote Jobs & Direct Applications
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4 text-slate-500">
+              <button onClick={() => setActiveTab('anti_scam')} className="hover:text-teal-700 font-medium">
+                Anti-Scam Protection
+              </button>
+              <span>•</span>
+              <button onClick={() => setActiveTab('ats_resume')} className="hover:text-teal-700 font-medium">
+                ATS Resume Tool
+              </button>
+              <span>•</span>
+              <button onClick={() => setActiveTab('interview_prep')} className="hover:text-teal-700 font-medium">
+                Interview Prep
+              </button>
+            </div>
+          </div>
+        </footer>
+
+      </div>
 
       {/* Global Modals */}
       <AuthModal
@@ -611,7 +741,9 @@ export default function App() {
         jobId={reportJobData.id}
         jobTitle={reportJobData.title}
         company={reportJobData.company}
-        onSubmitReport={handleSubmitReport}
+        onSubmitReport={(report) => {
+          console.log("Scam report submitted:", report);
+        }}
       />
 
       <PostJobModal
@@ -619,6 +751,12 @@ export default function App() {
         onClose={() => setIsPostJobModalOpen(false)}
         onAddJob={handleAddJob}
         onEnhanceJobWithAI={handleEnhanceJobWithAI}
+        currentUser={currentUser}
+        onOpenAuthModal={(mode) => {
+          setAuthModalMode(mode || 'login');
+          setIsAuthModalOpen(true);
+        }}
+        onOpenPricingModal={() => setIsEmployerPricingOpen(true)}
       />
 
       <EmployerPricingModal
@@ -642,8 +780,8 @@ export default function App() {
       />
 
       <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
         currentUser={currentUser}
         onUpdateProfile={(updatedUser) => {
           setCurrentUser(updatedUser);
@@ -661,36 +799,6 @@ export default function App() {
           window.open(url, '_blank', 'noopener,noreferrer');
         }}
       />
-
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-6 text-center text-xs">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <img 
-              src={logoImg} 
-              alt="RemotoOps Logo" 
-              referrerPolicy="no-referrer"
-              className="w-6 h-6 rounded-full border border-teal-500/30 object-cover" 
-            />
-            <p className="font-medium text-slate-300">
-              RemotoOps • Safe Global Remote Job Platform for Aspiring Beginners & Verified Clients
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <button onClick={() => setActiveTab('anti_scam')} className="hover:text-teal-400">
-              Anti-Scam Protection
-            </button>
-            <span>•</span>
-            <button onClick={() => setActiveTab('ats_resume')} className="hover:text-teal-400">
-              ATS Resume Builder
-            </button>
-            <span>•</span>
-            <button onClick={() => setActiveTab('interview_prep')} className="hover:text-teal-400">
-              Interview Guide
-            </button>
-          </div>
-        </div>
-      </footer>
 
     </div>
   );

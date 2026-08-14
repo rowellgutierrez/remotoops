@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MentorshipModule, RoleCategory } from '../types';
+import { MentorshipModule, RoleCategory, ROLE_CATEGORY_LABELS } from '../types';
 import { MENTORSHIP_MODULES } from '../data/mockData';
 import { 
   GraduationCap, 
@@ -150,40 +150,20 @@ export const MentorshipHub: React.FC<MentorshipHubProps> = ({
       {/* TAB 1: PRACTICAL SKILL MODULES ROADMAP */}
       {activeTab === 'roadmap' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 className="text-lg font-bold text-slate-900">Step-by-Step Tool Mastery Modules</h2>
             
-            <div className="flex gap-2 text-xs">
-              <button
-                onClick={() => setSelectedRoleCategory('executive_assistant')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  selectedRoleCategory === 'executive_assistant'
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200'
-                }`}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-slate-500 hidden sm:inline">Role Track:</label>
+              <select
+                value={selectedRoleCategory}
+                onChange={(e) => setSelectedRoleCategory(e.target.value as RoleCategory)}
+                className="bg-white border border-slate-300 text-xs font-bold text-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
               >
-                Executive Assistant
-              </button>
-              <button
-                onClick={() => setSelectedRoleCategory('social_media_manager')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  selectedRoleCategory === 'social_media_manager'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200'
-                }`}
-              >
-                Social Media
-              </button>
-              <button
-                onClick={() => setSelectedRoleCategory('admin_ops')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  selectedRoleCategory === 'admin_ops'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-200'
-                }`}
-              >
-                Admin Ops
-              </button>
+                {Object.entries(ROLE_CATEGORY_LABELS).map(([catKey, label]) => (
+                  <option key={catKey} value={catKey}>{label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -293,9 +273,9 @@ export const MentorshipHub: React.FC<MentorshipHubProps> = ({
                   onChange={(e) => setSelectedRoleCategory(e.target.value as RoleCategory)}
                   className="w-full bg-slate-50 border border-slate-300 text-xs text-slate-800 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  <option value="executive_assistant">Executive Assistant (EA)</option>
-                  <option value="social_media_manager">Social Media Manager (SMM)</option>
-                  <option value="admin_ops">Admin & Support Operations</option>
+                  {Object.entries(ROLE_CATEGORY_LABELS).map(([catKey, label]) => (
+                    <option key={catKey} value={catKey}>{label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -426,9 +406,9 @@ export const MentorshipHub: React.FC<MentorshipHubProps> = ({
                 onChange={(e) => setInterviewRole(e.target.value as RoleCategory)}
                 className="w-full bg-white border border-slate-300 text-xs text-slate-800 rounded-lg p-2 focus:outline-none"
               >
-                <option value="executive_assistant">Executive Assistant (Multi-timezone calendar, Inbox Zero, Travel)</option>
-                <option value="social_media_manager">Social Media Manager (Content calendar, Reel hooks, Community Crisis)</option>
-                <option value="admin_ops">Admin & Support Ops (Asana board updates, Airtable, SOP writing)</option>
+                {Object.entries(ROLE_CATEGORY_LABELS).map(([catKey, label]) => (
+                  <option key={catKey} value={catKey}>{label}</option>
+                ))}
               </select>
             </div>
 

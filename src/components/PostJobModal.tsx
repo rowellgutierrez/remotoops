@@ -1,46 +1,76 @@
 import React, { useState } from 'react';
-import { JobPost, RoleCategory, TimezoneOverlap, CompensationType, ExperienceLevel } from '../types';
-import { X, Sparkles, Send, Briefcase, Zap, ShieldCheck } from 'lucide-react';
+import { JobPost, RoleCategory, TimezoneOverlap, CompensationType, ExperienceLevel, UserAccount } from '../types';
+import { X, Sparkles, Send, Briefcase, Zap, ShieldCheck, AlertCircle, Building2 } from 'lucide-react';
 
 interface PostJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddJob: (job: JobPost) => void;
   onEnhanceJobWithAI: (data: any) => Promise<any>;
+  currentUser?: UserAccount | null;
+  onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
+  onOpenPricingModal?: () => void;
 }
+
+const COMMON_ROLE_SUGGESTIONS = [
+  'Executive Assistant (EA)',
+  'Virtual Assistant (VA)',
+  'Social Media Manager (SMM)',
+  'Customer Support & Chat Specialist',
+  'Data Entry Specialist',
+  'Bookkeeper / Accounting Assistant',
+  'Lead Generation Specialist',
+  'Graphic Designer',
+  'Video Editor / Content Creator',
+  'Project Coordinator',
+  'Administrative Support Specialist',
+  'Sales Development Representative (SDR)',
+  'Content Writer & Copywriter',
+  'E-commerce Store Manager',
+  'Community & Discord Moderator',
+  'Operations Coordinator'
+];
 
 export const PostJobModal: React.FC<PostJobModalProps> = ({
   isOpen,
   onClose,
   onAddJob,
-  onEnhanceJobWithAI
+  onEnhanceJobWithAI,
+  currentUser,
+  onOpenAuthModal,
+  onOpenPricingModal
 }) => {
   const [title, setTitle] = useState('');
-  const [company, setCompany] = useState('');
-  const [clientName, setClientName] = useState('Sarah Jenkins');
-  const [clientTitle, setClientTitle] = useState('Founder / Chief of Staff');
-  const [clientLocation, setClientLocation] = useState('Remote Worldwide');
-  const [roleCategory, setRoleCategory] = useState<RoleCategory>('executive_assistant');
-  const [compensation, setCompensation] = useState('$800 - $1,200 / month Stipend');
+  const [company, setCompany] = useState(currentUser?.companyName || '');
+  const [clientName, setClientName] = useState(currentUser?.name || 'Hiring Manager');
+  const [clientTitle, setClientTitle] = useState('Founder / Team Lead');
+  const [clientLocation, setClientLocation] = useState('100% Remote / Worldwide');
+  const [customRoleCategory, setCustomRoleCategory] = useState('Executive Assistant (EA)');
+  const [compensation, setCompensation] = useState('$800 - $1,500 / month');
   const [compensationType, setCompensationType] = useState<CompensationType>('paid_stipend');
-  const [hoursPerWeek, setHoursPerWeek] = useState('20 hrs/week');
-  const [timezone, setTimezone] = useState<TimezoneOverlap>('EST (UTC-5)');
-  const [mentorName, setMentorName] = useState('Sarah Jenkins');
-  const [mentorRole, setMentorRole] = useState('Direct 1-on-1 Weekly Executive Coaching');
+  const [hoursPerWeek, setHoursPerWeek] = useState('Full-time (40 hrs/wk)');
+  const [timezone, setTimezone] = useState<TimezoneOverlap>('Flexible / Async');
+  const [mentorName, setMentorName] = useState(currentUser?.name || 'Direct Supervisor');
+  const [mentorRole, setMentorRole] = useState('Senior Mentor & Direct Coach');
   const [description, setDescription] = useState('');
-  const [toolsInput, setToolsInput] = useState('Google Workspace, Notion, Slack, Loom');
-  const [selectedTier, setSelectedTier] = useState<'FREE' | 'PRO' | 'BUSINESS'>('FREE');
-  const [isFeaturedUpgrade, setIsFeaturedUpgrade] = useState(true);
+  const [toolsInput, setToolsInput] = useState('Google Workspace, Slack, Notion');
 
-  // New application method & experience level fields
+  // Application method & experience level fields
   const [applicationMethod, setApplicationMethod] = useState<'direct' | 'external'>('direct');
   const [externalApplyUrl, setExternalApplyUrl] = useState('');
-  const [experienceLevelNum, setExperienceLevelNum] = useState<ExperienceLevel>('no_experience');
+  const [experienceLevelNum, setExperienceLevelNum] = useState<ExperienceLevel>('beginner');
 
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiEnhancedData, setAiEnhancedData] = useState<any>(null);
 
   if (!isOpen) return null;
+
+  // Authorization validation: if user is not logged in or is a candidate
+  const isAuthorizedEmployer = currentUser && (
+    currentUser.role === 'client' || 
+    currentUser.role === 'employer' || 
+    currentUser.role === 'admin'
+  );
 
   const handleRunAiEnhance = async () => {
     if (!title.trim() && !description.trim()) return;
@@ -50,9 +80,9 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       const res = await onEnhanceJobWithAI({
         title,
         company,
-        roleType: roleCategory,
+        roleType: customRoleCategory,
         rawDescription: description,
-        mentorshipGoals: `Hands-on training for entry-level remote talent in ${roleCategory}`
+        mentorshipGoals: `Hands-on training and career growth for remote talent in ${customRoleCategory}`
       });
 
       if (res && res.success && res.data) {
@@ -100,16 +130,30 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       .map(t => t.trim())
       .filter(Boolean);
 
+    // Map custom role to standard RoleCategory or fallback to general
+    let mappedCategory: RoleCategory = 'general';
+    const lowerCategory = customRoleCategory.toLowerCase();
+    if (lowerCategory.includes('executive') || lowerCategory.includes('ea')) mappedCategory = 'executive_assistant';
+    else if (lowerCategory.includes('admin') || lowerCategory.includes('virtual assistant') || lowerCategory.includes('va')) mappedCategory = 'admin_ops';
+    else if (lowerCategory.includes('social') || lowerCategory.includes('smm')) mappedCategory = 'social_media_manager';
+    else if (lowerCategory.includes('customer') || lowerCategory.includes('support')) mappedCategory = 'customer_support';
+    else if (lowerCategory.includes('data') || lowerCategory.includes('lead')) mappedCategory = 'data_lead_gen';
+    else if (lowerCategory.includes('design') || lowerCategory.includes('video')) mappedCategory = 'creative_design';
+    else if (lowerCategory.includes('tech') || lowerCategory.includes('web') || lowerCategory.includes('dev')) mappedCategory = 'tech_web_ops';
+    else if (lowerCategory.includes('writ') || lowerCategory.includes('content')) mappedCategory = 'content_writing';
+    else if (lowerCategory.includes('book') || lowerCategory.includes('ecom')) mappedCategory = 'ecom_bookkeeping';
+    else if (lowerCategory.includes('mod') || lowerCategory.includes('discord')) mappedCategory = 'community_mod';
+
     const newJob: JobPost = {
       id: `job-${Date.now()}`,
       title,
       company,
-      companyLogo: 'https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=120&auto=format&fit=crop&q=80',
-      clientName,
-      clientTitle,
-      clientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      clientLocation,
-      roleCategory,
+      companyLogo: '',
+      clientName: clientName.trim() || company,
+      clientTitle: clientTitle.trim() || 'Hiring Manager',
+      clientAvatar: '',
+      clientLocation: clientLocation.trim() || '100% Remote / Worldwide',
+      roleCategory: mappedCategory,
       compensation,
       compensationType,
       hoursPerWeek,
@@ -121,19 +165,19 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       isVerifiedSafeClient: true,
       description,
       responsibilities: [
-        'Assist with daily operational tasks and multi-timezone schedules',
-        'Maintain async documentation and team project boards',
-        'Participate in weekly 1-on-1 mentorship feedback sessions'
+        'Collaborate with remote team members across asynchronous channels',
+        'Execute core tasks and deliver regular project updates',
+        'Maintain high attention to detail and clear communication'
       ],
       learningOutcomes: aiEnhancedData?.mentorshipHighlights || [
-        `Master essential remote tools for ${roleCategory}`,
-        'Build real-world client workflow experience',
-        'Receive formal letter of recommendation upon internship completion'
+        `Master essential remote workflows in ${customRoleCategory}`,
+        'Build real-world professional portfolio deliverables',
+        'Receive direct guidance and feedback from experienced team leads'
       ],
-      requiredTools: toolsArr.length > 0 ? toolsArr : ['Google Workspace', 'Notion', 'Slack'],
+      requiredTools: toolsArr.length > 0 ? toolsArr : ['Google Workspace', 'Slack', 'Notion'],
       postedDate: 'Just now',
       applicantCount: 0,
-      featured: isFeaturedUpgrade || selectedTier !== 'FREE',
+      featured: false,
 
       // Application Method & Experience fields
       applicationMethod,
@@ -142,7 +186,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       jobStatus: 'OPEN',
       viewsCount: 0,
       savesCount: 0,
-      applicationsCount: 0
+      applicationsCount: 0,
+      postedBy: currentUser?.id || 'employer'
     };
 
     onAddJob(newJob);
@@ -151,20 +196,46 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 md:p-8 space-y-6">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 sm:p-8 space-y-6">
         
+        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-200">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-teal-600" /> Post Remote Mentorship Opportunity
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-teal-600" /> Post Remote Job Opening
             </h2>
-            <p className="text-xs text-slate-500">Global clients post remote internships for entry-level EAs, Admin, and Social Media talent.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Reach thousands of qualified remote candidates looking for immediate work.</p>
           </div>
 
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Role Access Notice if not authenticated or not employer */}
+        {!currentUser ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 text-xs space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-950">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Employer Sign-In Required</span>
+            </div>
+            <p className="text-amber-800">
+              To post jobs and prevent recruitment spam, please sign in or register as an employer.
+            </p>
+            {onOpenAuthModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuthModal('login');
+                }}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors inline-block text-[11px]"
+              >
+                Sign In as Employer
+              </button>
+            )}
+          </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
@@ -174,34 +245,69 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Junior Executive Assistant Intern"
+                placeholder="e.g. Remote Executive Assistant"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-slate-800">Company / Studio Name *</label>
+              <label className="font-bold text-slate-800">Company / Organization *</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Apex Global Ventures"
+                placeholder="e.g. Apex Media Group"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
               />
             </div>
           </div>
 
+          {/* ROLE CATEGORY — Free form text input with common recommendations */}
+          <div className="space-y-1.5 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-900">Role Category / Department *</label>
+              <span className="text-[11px] text-slate-500 font-medium">Type any job role or select below</span>
+            </div>
+            
+            <input
+              type="text"
+              required
+              placeholder="e.g. Executive Assistant, Customer Support, Social Media, Bookkeeper..."
+              value={customRoleCategory}
+              onChange={(e) => setCustomRoleCategory(e.target.value)}
+              className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-bold text-xs"
+            />
+
+            {/* Quick click suggestions */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {COMMON_ROLE_SUGGESTIONS.slice(0, 8).map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setCustomRoleCategory(suggestion)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                    customRoleCategory === suggestion
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-teal-400 hover:text-teal-700'
+                  }`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* APPLICATION METHOD & EXPERIENCE LEVEL */}
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-bold text-slate-800 block">Application Method *</label>
                 <div className="flex gap-2 pt-1">
-                  <label className={`flex-1 p-2 rounded-lg border text-center cursor-pointer transition-all ${
-                    applicationMethod === 'direct' ? 'bg-teal-50 border-teal-500 text-teal-900 font-bold' : 'bg-white border-slate-300 text-slate-600'
+                  <label className={`flex-1 p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                    applicationMethod === 'direct' ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs' : 'bg-white border-slate-300 text-slate-600'
                   }`}>
                     <input
                       type="radio"
@@ -213,8 +319,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                     />
                     Apply on RemotoOps
                   </label>
-                  <label className={`flex-1 p-2 rounded-lg border text-center cursor-pointer transition-all ${
-                    applicationMethod === 'external' ? 'bg-teal-50 border-teal-500 text-teal-900 font-bold' : 'bg-white border-slate-300 text-slate-600'
+                  <label className={`flex-1 p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                    applicationMethod === 'external' ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-xs' : 'bg-white border-slate-300 text-slate-600'
                   }`}>
                     <input
                       type="radio"
@@ -224,22 +330,22 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                       onChange={() => setApplicationMethod('external')}
                       className="sr-only"
                     />
-                    Apply on Company Website
+                    Company Website / ATS
                   </label>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-slate-800 block">Experience Level Required *</label>
+                <label className="font-bold text-slate-800 block">Experience Requirement *</label>
                 <select
                   value={experienceLevelNum}
                   onChange={(e) => setExperienceLevelNum(e.target.value as ExperienceLevel)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none font-medium text-xs mt-1"
                 >
                   <option value="no_experience">No Experience Required / Entry Level</option>
                   <option value="beginner">Beginner (0-1 Year)</option>
-                  <option value="1_2_years">1+ Years Experience</option>
-                  <option value="3_5_years">3+ Years Experience</option>
+                  <option value="1_2_years">1-2 Years Experience</option>
+                  <option value="3_5_years">3-5 Years Mid-Level</option>
                   <option value="5_plus_years">5+ Years Senior</option>
                 </select>
               </div>
@@ -247,99 +353,84 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
 
             {applicationMethod === 'external' && (
               <div className="space-y-1 pt-1">
-                <label className="font-bold text-slate-800 block">Employer External Application URL *</label>
+                <label className="font-bold text-slate-800 block">Company Application URL *</label>
                 <input
                   type="url"
                   required={applicationMethod === 'external'}
-                  placeholder="https://company.com/careers/apply"
+                  placeholder="https://yourcompany.com/careers/apply"
                   value={externalApplyUrl}
                   onChange={(e) => setExternalApplyUrl(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 />
-                <p className="text-[10px] text-slate-500">
-                  Applicants clicking "Apply" will be informed and redirected to your company website or ATS portal in a new tab.
-                </p>
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="font-bold text-slate-800">Role Category *</label>
-              <select
-                value={roleCategory}
-                onChange={(e) => setRoleCategory(e.target.value as RoleCategory)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
-              >
-                <option value="executive_assistant">Executive Assistant (EA)</option>
-                <option value="social_media_manager">Social Media Manager (SMM)</option>
-                <option value="admin_ops">Admin & Support Operations</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
               <label className="font-bold text-slate-800">Compensation *</label>
               <input
                 type="text"
-                placeholder="e.g. $800 / month Stipend"
+                placeholder="e.g. $1,000 - $1,500 / month"
                 value={compensation}
                 onChange={(e) => setCompensation(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none font-medium"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-slate-800">Timezone / Overlap *</label>
+              <label className="font-bold text-slate-800">Job Type *</label>
+              <select
+                value={hoursPerWeek}
+                onChange={(e) => setHoursPerWeek(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none font-medium"
+              >
+                <option value="Full-time (40 hrs/wk)">Full-time (40 hrs/wk)</option>
+                <option value="Part-time (20 hrs/wk)">Part-time (20 hrs/wk)</option>
+                <option value="Contract / Freelance">Contract / Freelance</option>
+                <option value="Flexible / Hourly">Flexible / Hourly</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-bold text-slate-800">Timezone / Location *</label>
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value as TimezoneOverlap)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none font-medium"
               >
+                <option value="Flexible / Async">Flexible / Async (Worldwide)</option>
                 <option value="EST (UTC-5)">EST (UTC-5)</option>
                 <option value="PST (UTC-8)">PST (UTC-8)</option>
                 <option value="GMT/BST (UTC+0)">GMT/BST (UTC+0)</option>
                 <option value="CET (UTC+1)">CET (UTC+1)</option>
                 <option value="SGT/PHT (UTC+8)">SGT/PHT (UTC+8)</option>
-                <option value="Flexible / Async">Flexible / Async</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-800">Assigned Mentor Name *</label>
-              <input
-                type="text"
-                value={mentorName}
-                onChange={(e) => setMentorName(e.target.value)}
-                placeholder="e.g. Sarah Jenkins"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-800">Tools Required (comma-separated)</label>
-              <input
-                type="text"
-                value={toolsInput}
-                onChange={(e) => setToolsInput(e.target.value)}
-                placeholder="Google Workspace, Notion, Slack, Canva"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none"
-              />
-            </div>
+          <div className="space-y-1">
+            <label className="font-bold text-slate-800">Tools Required (comma-separated)</label>
+            <input
+              type="text"
+              value={toolsInput}
+              onChange={(e) => setToolsInput(e.target.value)}
+              placeholder="Google Workspace, Slack, Notion, Canva, Loom"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none font-medium"
+            />
           </div>
 
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-800">Role Description & Mentorship Expectations:</label>
+              <label className="font-bold text-slate-800">Role Description & Expectations:</label>
               <button
                 type="button"
                 onClick={handleRunAiEnhance}
                 disabled={isEnhancing || (!title && !description)}
-                className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200 flex items-center gap-1 disabled:opacity-40"
+                className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 flex items-center gap-1 disabled:opacity-40"
               >
                 <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                {isEnhancing ? 'Enhancing with Gemini...' : 'AI Structure & Polish'}
+                {isEnhancing ? 'Polishing with AI...' : 'AI Polish & Format'}
               </button>
             </div>
 
@@ -347,93 +438,33 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what the intern will learn, key tasks, and weekly feedback structure..."
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Describe daily responsibilities, skills, team culture, and how the applicant will contribute..."
+              className="w-full bg-slate-50 border border-slate-300 rounded-2xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
             />
           </div>
 
-          {/* Employer Subscription Tier Selection */}
-          <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-3 border border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-xs text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-teal-400" /> Employer Hiring Plan Selection
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">Job Seekers apply for $0 FREE</span>
+          {/* Employer Hiring Guarantee Note */}
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl text-slate-600 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+              <span>Job Seekers apply for <strong className="text-teal-800">100% Free</strong>. No applicant fees allowed.</span>
             </div>
-
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            {onOpenPricingModal && (
               <button
                 type="button"
-                onClick={() => setSelectedTier('FREE')}
-                className={`p-2.5 rounded-xl border font-bold transition-all text-left space-y-0.5 ${
-                  selectedTier === 'FREE'
-                    ? 'bg-teal-500/20 border-teal-500 text-teal-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
+                onClick={onOpenPricingModal}
+                className="text-xs font-bold text-teal-700 hover:underline shrink-0"
               >
-                <div className="text-[11px]">Free Tier</div>
-                <div className="text-sm font-black">$0 / mo</div>
-                <div className="text-[9px] text-slate-400 font-normal">1 active listing</div>
+                View Hiring Plans
               </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedTier('PRO')}
-                className={`p-2.5 rounded-xl border font-bold transition-all text-left space-y-0.5 ${
-                  selectedTier === 'PRO'
-                    ? 'bg-teal-500/20 border-teal-500 text-teal-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="text-[11px] text-teal-400 font-extrabold">Pro Tier ⭐</div>
-                <div className="text-sm font-black">$6 / mo</div>
-                <div className="text-[9px] text-slate-400 font-normal">10 active listings</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedTier('BUSINESS')}
-                className={`p-2.5 rounded-xl border font-bold transition-all text-left space-y-0.5 ${
-                  selectedTier === 'BUSINESS'
-                    ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="text-[11px] text-indigo-400 font-extrabold">Business</div>
-                <div className="text-sm font-black">$16 / mo</div>
-                <div className="text-[9px] text-slate-400 font-normal">Unlimited listings</div>
-              </button>
-            </div>
-
-            {/* Featured Job Addon Checkbox */}
-            <label className="flex items-center justify-between p-3 bg-slate-800/90 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  checked={isFeaturedUpgrade}
-                  onChange={(e) => setIsFeaturedUpgrade(e.target.checked)}
-                  className="w-4 h-4 rounded text-teal-500 focus:ring-teal-500 accent-teal-500"
-                />
-                <div>
-                  <span className="font-bold text-xs text-amber-300 flex items-center gap-1">
-                    💎 Add Featured Top Placement ($3 Boost)
-                  </span>
-                  <p className="text-[10px] text-slate-400">
-                    Pins listing at top of candidate search results for 7 days.
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
-                +$3.00
-              </span>
-            </label>
+            )}
           </div>
 
           <button
             type="submit"
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4" /> Publish Mentorship Job Posting
+            <Send className="w-4 h-4" /> Publish Job Posting
           </button>
 
         </form>

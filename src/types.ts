@@ -188,6 +188,19 @@ export interface FeedPost {
   comments?: { id: string; authorName: string; authorAvatar: string; text: string; time: string }[];
 }
 
+export interface SavedSearch {
+  id: string;
+  userId: string;
+  name: string;
+  query: string;
+  category?: string;
+  timezone?: string;
+  compensationType?: string;
+  filters?: any;
+  notificationFrequency?: string;
+  createdAt: string;
+}
+
 export interface SavedJob {
   id: string;
   userId: string;
@@ -211,8 +224,13 @@ export interface Application {
   jobTitle: string;
   company: string;
   candidateName: string;
-  candidateAvatar: string;
+  candidateAvatar?: string;
   candidateEmail: string;
+  candidatePhone?: string;
+  candidateLocation?: string;
+  resumeUrl?: string;
+  portfolioUrl?: string;
+  linkedinUrl?: string;
   coverPitch: string;
   toolExperience: string[];
   status: 'applied' | 'under_review' | 'intro_chat' | 'shortlisted' | 'interview' | 'accepted' | 'declined' | 'hired';
@@ -221,7 +239,6 @@ export interface Application {
   candidateId?: string;
   applicationType?: 'direct' | 'external_click';
   externalUrl?: string;
-  resumeUrl?: string;
 }
 
 export interface DirectMessage {

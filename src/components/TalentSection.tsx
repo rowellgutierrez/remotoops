@@ -234,9 +234,12 @@ export const TalentSection: React.FC<TalentSectionProps> = ({
                 {/* Profile Card Header */}
                 <div className="flex items-start gap-3">
                   <img
-                    src={candidate.avatar}
+                    src={candidate.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                     alt={candidate.name}
-                    className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm"
+                    className="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-sm bg-slate-100"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
@@ -319,9 +322,12 @@ export const TalentSection: React.FC<TalentSectionProps> = ({
             <div className="flex items-start justify-between pb-4 border-b border-slate-200">
               <div className="flex gap-4">
                 <img
-                  src={selectedCandidateModal.avatar}
+                  src={selectedCandidateModal.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                   alt={selectedCandidateModal.name}
-                  className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-md"
+                  className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-md bg-slate-100"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+                  }}
                 />
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900">{selectedCandidateModal.name}</h2>

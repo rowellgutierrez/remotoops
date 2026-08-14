@@ -445,9 +445,12 @@ export const FeedSection: React.FC<FeedSectionProps> = ({
               {candidates.map(candidate => (
                 <div key={candidate.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
                   <img
-                    src={candidate.avatar}
+                    src={candidate.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                     alt={candidate.name}
-                    className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                    className="w-9 h-9 rounded-full object-cover border border-slate-200 bg-slate-100"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+                    }}
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 truncate">{candidate.name}</h4>

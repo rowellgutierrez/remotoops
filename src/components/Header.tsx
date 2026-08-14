@@ -2,40 +2,53 @@ import React, { useState } from 'react';
 import { UserAccount } from '../types';
 import logoImg from '../assets/images/remotoops_logo_1786167434166.jpg';
 import { 
-  Briefcase, 
-  Rss, 
-  Users, 
-  GraduationCap, 
-  PlusCircle, 
   Search, 
-  UserCheck, 
-  FileCheck2,
-  FileText,
-  Bot,
-  ShieldAlert,
-  ShieldCheck,
-  LogIn,
-  LogOut,
+  Bookmark, 
+  Bell, 
+  Briefcase, 
+  MessageSquare, 
+  Building2, 
+  User as UserIcon, 
+  LogOut, 
+  LogIn, 
+  PlusCircle, 
+  Sun, 
+  Moon, 
+  ShieldCheck, 
   ChevronDown,
-  Sparkles,
-  User as UserIcon,
-  BadgeCheck
+  Menu,
+  X
 } from 'lucide-react';
 
+export type AppTab = 
+  | 'find_jobs' 
+  | 'saved_jobs' 
+  | 'saved_searches' 
+  | 'my_applications' 
+  | 'messages' 
+  | 'employers' 
+  | 'ats_resume' 
+  | 'interview_prep' 
+  | 'anti_scam';
+
 interface HeaderProps {
-  activeTab: 'jobs' | 'ats_resume' | 'interview_prep' | 'anti_scam' | 'mentorship' | 'talent' | 'portal' | 'feed';
-  setActiveTab: (tab: 'jobs' | 'ats_resume' | 'interview_prep' | 'anti_scam' | 'mentorship' | 'talent' | 'portal' | 'feed') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   currentUser: UserAccount | null;
   onOpenAuthModal: (mode?: 'login' | 'signup') => void;
   onLogout: () => void;
   onOpenPostJob: () => void;
+  onOpenAccountModal: () => void;
   onOpenPricingModal?: () => void;
   onOpenAdminConsole?: () => void;
-  onOpenKycModal?: () => void;
-  onOpenProfileModal?: () => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
+  savedJobsCount: number;
   applicationCount: number;
+  unreadMessagesCount?: number;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
+  onToggleMobileSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -45,311 +58,183 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthModal,
   onLogout,
   onOpenPostJob,
+  onOpenAccountModal,
   onOpenPricingModal,
   onOpenAdminConsole,
-  onOpenKycModal,
-  onOpenProfileModal,
-  searchQuery,
+  savedJobsCount,
+  applicationCount,
+  unreadMessagesCount = 0,
+  theme = 'light',
+  onToggleTheme,
+  searchQuery = '',
   setSearchQuery,
-  applicationCount
+  onToggleMobileSidebar
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const isEmployer = currentUser && (currentUser.role === 'client' || currentUser.role === 'employer' || currentUser.role === 'admin');
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 transition-colors">
+      <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+        
+        {/* Mobile menu trigger & mobile brand */}
+        <div className="flex items-center gap-3 md:hidden">
+          <button
+            onClick={onToggleMobileSidebar}
+            className="p-2 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
           
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-2">
-            <div 
-              onClick={() => setActiveTab('jobs')}
-              className="flex items-center gap-2 cursor-pointer group"
-            >
-              <img 
-                src={logoImg} 
-                alt="RemotoOps Logo" 
-                referrerPolicy="no-referrer"
-                className="w-9 h-9 rounded-full border border-teal-500/40 object-cover shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform" 
-              />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-base tracking-tight text-white">RemotoOps</span>
-                  <span className="bg-teal-500/20 text-teal-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded-full border border-teal-500/30 uppercase tracking-wider">
-                    Safe Remote Jobs
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium hidden sm:block">
-                  No Experience Required • Verified Clients & Mentorship
-                </p>
-              </div>
-            </div>
+          <div 
+            onClick={() => {
+              setActiveTab('find_jobs');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-2.5 cursor-pointer"
+          >
+            <img 
+              src={logoImg} 
+              alt="RemotoOps" 
+              referrerPolicy="no-referrer"
+              className="w-10 h-10 rounded-xl object-cover border-2 border-indigo-500/30 shadow-xs" 
+            />
+            <span className="font-black text-lg text-slate-900 tracking-tight">RemotoOps</span>
           </div>
+        </div>
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-xs hidden lg:block">
+        {/* Global Search Bar in Top Header */}
+        <div className="hidden md:flex flex-1 max-w-xl items-center relative">
+          <div className="w-full flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500 transition-all">
+            <Search className="w-5 h-5 text-slate-400 mr-2.5 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+              placeholder="Search jobs, skills, or companies..."
+              className="w-full bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery && setSearchQuery('')}
+                className="text-xs text-slate-400 hover:text-slate-600 font-bold ml-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Right Header Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
+          
+          {/* Saved Searches / Alert Icon shortcut */}
+          <button
+            onClick={() => setActiveTab('saved_searches')}
+            className="p-2.5 text-slate-600 hover:text-slate-950 hover:bg-slate-100 rounded-xl transition-colors relative"
+            title="Saved Searches & Alerts"
+          >
+            <Bell className="w-5 h-5" />
+          </button>
+
+          {/* Post Job Action Button */}
+          <button
+            onClick={onOpenPostJob}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all"
+          >
+            <PlusCircle className="w-4 h-4 text-white" />
+            <span className="hidden sm:inline">Post Job</span>
+          </button>
+
+          {/* User Account / Dropdown */}
+          {currentUser ? (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search jobs, tools, or mentorship..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-800/80 border border-slate-700/80 text-xs text-slate-200 placeholder-slate-400 rounded-full pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-              />
-            </div>
-          </div>
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 p-1.5 pl-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all text-xs font-bold"
+              >
+                <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="text-slate-800 hidden lg:inline max-w-[120px] truncate">{currentUser.name}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
 
-          {/* Nav Icons / Main Tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            
-            <button
-              onClick={() => setActiveTab('jobs')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'jobs'
-                  ? 'bg-slate-800 text-teal-400 border border-teal-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Jobs</span>
-            </button>
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 space-y-1 text-xs z-50 animate-in fade-in zoom-in-95">
+                  <div className="p-2.5 bg-slate-50 rounded-xl mb-1">
+                    <p className="font-bold text-slate-900 text-xs">{currentUser.name}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
+                  </div>
 
-            <button
-              onClick={() => setActiveTab('ats_resume')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'ats_resume'
-                  ? 'bg-slate-800 text-teal-400 border border-teal-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 text-amber-400" />
-              <span>ATS Resume</span>
-            </button>
+                  <button
+                    onClick={() => {
+                      onOpenAccountModal();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl flex items-center gap-2 font-bold transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 text-teal-600" />
+                    <span>Account Profile</span>
+                  </button>
 
-            <button
-              onClick={() => setActiveTab('interview_prep')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'interview_prep'
-                  ? 'bg-slate-800 text-teal-400 border border-teal-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <Bot className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Interview Guide</span>
-            </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('saved_jobs');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl flex items-center gap-2 transition-colors"
+                  >
+                    <Bookmark className="w-4 h-4 text-teal-600" />
+                    <span>Saved Jobs ({savedJobsCount})</span>
+                  </button>
 
-            <button
-              onClick={() => setActiveTab('anti_scam')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'anti_scam'
-                  ? 'bg-slate-800 text-rose-400 border border-rose-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Anti-Scam</span>
-            </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('my_applications');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl flex items-center gap-2 transition-colors"
+                  >
+                    <Briefcase className="w-4 h-4 text-teal-600" />
+                    <span>My Applications ({applicationCount})</span>
+                  </button>
 
-            <button
-              onClick={() => setActiveTab('mentorship')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hidden md:flex ${
-                activeTab === 'mentorship'
-                  ? 'bg-slate-800 text-teal-400 border border-teal-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-              <span>AI Mentorship</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('portal')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
-                activeTab === 'portal'
-                  ? 'bg-slate-800 text-teal-400 border border-teal-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Portal</span>
-              {applicationCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-teal-500 text-slate-900 font-bold text-[9px] flex items-center justify-center">
-                  {applicationCount}
-                </span>
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-2 font-bold border-t border-slate-100 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
               )}
-            </button>
-
-          </nav>
-
-          {/* User Auth Controls & Post Job CTA */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-800 shrink-0">
-            
-            {/* Show Admin Panel button ONLY if user is logged in as Admin */}
-            {onOpenAdminConsole && currentUser?.role === 'admin' && (
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
               <button
-                onClick={onOpenAdminConsole}
-                className="flex items-center gap-1.5 bg-indigo-950/80 hover:bg-indigo-900/90 text-teal-300 font-bold text-[11px] px-2.5 py-1.5 rounded-lg border border-indigo-700/80 shadow-sm transition-all"
-                title="Admin Console - View Users, Firebase DB, Signups & Subscriptions"
+                onClick={() => onOpenAuthModal('login')}
+                className="text-slate-700 hover:text-slate-900 font-bold text-xs px-3 py-2 rounded-xl hover:bg-slate-100 transition-all flex items-center gap-1.5"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                <span className="hidden sm:inline">Admin Panel</span>
+                <LogIn className="w-3.5 h-3.5 text-teal-600" />
+                <span>Log In</span>
               </button>
-            )}
 
-            {onOpenPricingModal && (
               <button
-                onClick={onOpenPricingModal}
-                className="hidden xl:flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-700 transition-all"
+                onClick={() => onOpenAuthModal('signup')}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs"
               >
-                <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-                <span>Employer Pricing</span>
+                <span>Sign Up</span>
               </button>
-            )}
-
-            {/* Post Job Button */}
-            <button
-              onClick={onOpenPostJob}
-              className="flex items-center gap-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg shadow-md transition-all hover:scale-105"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Post Opportunity</span>
-            </button>
-
-            {/* Auth State Button */}
-            {currentUser ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 p-1.5 pl-2.5 rounded-xl border border-slate-700/80 transition-all text-xs"
-                >
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-6 h-6 rounded-full object-cover border border-slate-600"
-                  />
-                  <div className="text-left hidden md:block">
-                    <p className="font-bold text-slate-100 text-[11px] leading-tight flex items-center gap-1">
-                      {currentUser.name}
-                      {currentUser.role === 'client' && <BadgeCheck className="w-3 h-3 text-emerald-400" />}
-                    </p>
-                    <p className="text-[9px] text-slate-400 uppercase font-semibold">
-                      {currentUser.role === 'candidate' ? 'Trainee' : 'Client'}
-                    </p>
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                {/* User Dropdown Menu */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1 text-xs z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/60 mb-1">
-                      <p className="font-bold text-white">{currentUser.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
-                      
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
-                          currentUser.role === 'candidate' 
-                            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                        }`}>
-                          {currentUser.role === 'candidate' ? 'Beginner Applicant' : 'Verified Employer'}
-                        </span>
-
-                        {!currentUser.emailVerified ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                            Email Unverified
-                          </span>
-                        ) : currentUser.verificationStatus === 'verified' ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            ✓ Verified Profile
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 capitalize">
-                            Status: {currentUser.verificationStatus || 'incomplete'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {onOpenProfileModal && (
-                      <button
-                        onClick={() => {
-                          onOpenProfileModal();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2 font-bold"
-                      >
-                        <UserIcon className="w-3.5 h-3.5 text-teal-400" /> My Profile & Cover Banner
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setActiveTab('portal');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2"
-                    >
-                      <FileCheck2 className="w-3.5 h-3.5 text-teal-400" /> My Applications & Messages
-                    </button>
-
-                    {onOpenKycModal && (
-                      <button
-                        onClick={() => {
-                          onOpenKycModal();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-teal-300 hover:bg-teal-950/40 rounded-lg flex items-center gap-2 font-semibold border border-teal-500/30 my-1"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                        {currentUser?.isKycVerified ? 'Verified KYC Badge ✓' : 'Verify Facial ID (KYC)'}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        onOpenAuthModal('login');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2"
-                    >
-                      <UserIcon className="w-3.5 h-3.5 text-indigo-400" /> Switch Account
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onLogout();
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-rose-400 hover:bg-rose-950/40 rounded-lg flex items-center gap-2 font-bold border-t border-slate-800"
-                    >
-                      <LogOut className="w-3.5 h-3.5" /> Log Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => onOpenAuthModal('login')}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition-all flex items-center gap-1"
-                >
-                  <LogIn className="w-3.5 h-3.5 text-teal-400" /> Log In
-                </button>
-
-                <button
-                  onClick={() => onOpenAuthModal('signup')}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all hidden sm:flex items-center gap-1 shadow-sm"
-                >
-                  <UserCheck className="w-3.5 h-3.5" /> Sign Up
-                </button>
-              </div>
-            )}
-
-          </div>
+            </div>
+          )}
 
         </div>
+
       </div>
     </header>
   );
