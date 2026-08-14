@@ -7,7 +7,7 @@ import {
   INITIAL_FEED, 
   INITIAL_APPLICATIONS 
 } from './data/mockData';
-import { auth, db, setDoc, doc, getDoc, getDocs, collection, onAuthStateChanged, signOut, where, query, deleteDoc } from './lib/firebase';
+import { auth, db, setDoc, doc, getDoc, getDocs, onSnapshot, collection, onAuthStateChanged, signOut, where, query, deleteDoc } from './lib/firebase';
 import { Header } from './components/Header';
 import { FeedSection } from './components/FeedSection';
 import { JobsSection } from './components/JobsSection';
@@ -67,9 +67,16 @@ export default function App() {
 
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
 
-  // Auth State Listener using Firebase Auth
+  // Auth State Listener using Firebase Auth with real-time Firestore profile sync
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeDoc: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
+
       if (firebaseUser) {
         try {
           const idTokenResult = await firebaseUser.getIdTokenResult().catch(() => null);
@@ -81,61 +88,76 @@ export default function App() {
           console.log(`[App] Auth state changed. User: ${firebaseUser.email} | emailVerified: ${firebaseUser.emailVerified}`);
 
           const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userDocRef);
 
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            const isAdmin = isAdminClaim || userData.role === 'admin';
-            const isVerified = firebaseUser.emailVerified || isAdmin;
+          // Real-time listener so changes (avatar, cover, profile updates) persist immediately across sessions & tabs
+          unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              const isAdmin = isAdminClaim || userData.role === 'admin';
+              const isVerified = firebaseUser.emailVerified || isAdmin;
 
-            setCurrentUser({
-              id: firebaseUser.uid,
-              name: userData.displayName || userData.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
-              email: firebaseUser.email || '',
-              role: isAdmin ? 'admin' : (userData.role === 'employer' || userData.role === 'client' ? 'client' : 'candidate'),
-              avatar: userData.avatar || firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-              headline: isAdmin ? 'RemotoOps Super Admin' : (userData.headline || 'Member'),
-              location: userData.location || 'Remote Worldwide',
-              phoneNumber: userData.phoneNumber,
-              professionalTitle: userData.professionalTitle,
-              companyName: userData.companyName,
-              companyWebsite: userData.companyWebsite,
-              companyDescription: userData.companyDescription,
-              about: userData.about || userData.bio,
-              emailVerified: isVerified,
-              verificationStatus: userData.verificationStatus || 'incomplete',
-              verificationNotes: userData.verificationNotes,
-              isEmployerVerified: userData.isEmployerVerified,
-              isProfileVerified: userData.isProfileVerified,
-              isKycVerified: userData.isKycVerified,
-              isNoExperienceBeginner: userData.isNoExperienceBeginner,
-              portfolioUrl: userData.portfolioUrl,
-              resumeUrl: userData.resumeUrl,
-              workExperience: userData.workExperience,
-              skills: userData.skills || [],
-              status: userData.status || 'active',
-              createdAt: userData.createdAt,
-              lastLoginAt: new Date().toISOString()
-            });
-          } else {
-            // Document doesn't exist yet, construct basic fallback
-            const isAdmin = isAdminClaim;
-            const isVerified = firebaseUser.emailVerified || isAdmin;
+              setCurrentUser({
+                id: firebaseUser.uid,
+                name: userData.displayName || userData.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
+                email: firebaseUser.email || '',
+                role: isAdmin ? 'admin' : (userData.role === 'employer' || userData.role === 'client' ? 'client' : 'candidate'),
+                avatar: userData.avatar || userData.photoURL || firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                coverImage: userData.coverImage || userData.coverPhoto || userData.coverUrl || '',
+                headline: isAdmin ? 'RemotoOps Super Admin' : (userData.headline || 'Member'),
+                location: userData.location || 'Remote Worldwide',
+                phoneNumber: userData.phoneNumber,
+                professionalTitle: userData.professionalTitle,
+                companyName: userData.companyName,
+                companyWebsite: userData.companyWebsite,
+                companyDescription: userData.companyDescription,
+                businessLocation: userData.businessLocation,
+                contactName: userData.contactName,
+                companyPhone: userData.companyPhone,
+                bio: userData.bio || userData.about,
+                about: userData.about || userData.bio,
+                websiteUrl: userData.websiteUrl,
+                linkedinUrl: userData.linkedinUrl,
+                portfolioUrl: userData.portfolioUrl,
+                resumeUrl: userData.resumeUrl,
+                workExperience: userData.workExperience,
+                skills: userData.skills || [],
+                experiences: userData.experiences || [],
+                education: userData.education || [],
+                emailVerified: isVerified,
+                verificationStatus: userData.verificationStatus || 'incomplete',
+                verificationNotes: userData.verificationNotes,
+                isEmployerVerified: userData.isEmployerVerified,
+                isProfileVerified: userData.isProfileVerified,
+                isKycVerified: userData.isKycVerified,
+                isNoExperienceBeginner: userData.isNoExperienceBeginner,
+                status: userData.status || 'active',
+                createdAt: userData.createdAt,
+                updatedAt: userData.updatedAt,
+                lastLoginAt: userData.lastLoginAt || new Date().toISOString()
+              });
+            } else {
+              // Document doesn't exist yet, construct basic fallback
+              const isAdmin = isAdminClaim;
+              const isVerified = firebaseUser.emailVerified || isAdmin;
 
-            const fallbackUser: UserAccount = {
-              id: firebaseUser.uid,
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
-              email: firebaseUser.email || '',
-              role: isAdmin ? 'admin' : 'candidate',
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-              headline: isAdmin ? 'RemotoOps Super Admin' : 'Jobseeker',
-              location: 'Remote Worldwide',
-              emailVerified: isVerified,
-              verificationStatus: 'incomplete',
-              status: 'active'
-            };
-            setCurrentUser(fallbackUser);
-          }
+              const fallbackUser: UserAccount = {
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
+                email: firebaseUser.email || '',
+                role: isAdmin ? 'admin' : 'candidate',
+                avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                coverImage: '',
+                headline: isAdmin ? 'RemotoOps Super Admin' : 'Jobseeker',
+                location: 'Remote Worldwide',
+                emailVerified: isVerified,
+                verificationStatus: 'incomplete',
+                status: 'active'
+              };
+              setCurrentUser(fallbackUser);
+            }
+          }, (err) => {
+            console.error("Firestore user doc listener notice:", err);
+          });
         } catch (err) {
           console.error("Error fetching user profile from Firestore:", err);
         }
@@ -144,7 +166,12 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+      }
+    };
   }, []);
 
   const handleLogout = async () => {
