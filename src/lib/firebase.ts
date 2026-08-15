@@ -33,6 +33,7 @@ import {
   getStorage,
   ref,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject
 } from 'firebase/storage';
@@ -87,6 +88,7 @@ export {
   serverTimestamp,
   ref,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject
 };

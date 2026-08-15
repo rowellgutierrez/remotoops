@@ -81,6 +81,9 @@ export interface UserAccount {
   linkedinUrl?: string;
   portfolioUrl?: string;
   resumeUrl?: string;
+  resumeFileName?: string;
+  resumeStoragePath?: string;
+  resumeUploadedAt?: string;
   workExperience?: string;
   skills?: string[];
   experiences?: UserExperience[];

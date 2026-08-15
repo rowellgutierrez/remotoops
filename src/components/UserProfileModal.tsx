@@ -54,6 +54,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [resumeUrl, setResumeUrl] = useState('');
   const [resumeFileName, setResumeFileName] = useState('');
+  const [resumeStoragePath, setResumeStoragePath] = useState('');
+  const [resumeUploadedAt, setResumeUploadedAt] = useState('');
+  const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkillInput, setNewSkillInput] = useState('');
   
@@ -101,6 +104,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setLinkedinUrl(currentUser.linkedinUrl || '');
       setPortfolioUrl(currentUser.portfolioUrl || '');
       setResumeUrl(currentUser.resumeUrl || '');
+      setResumeFileName(currentUser.resumeFileName || '');
+      setResumeStoragePath(currentUser.resumeStoragePath || '');
+      setResumeUploadedAt(currentUser.resumeUploadedAt || '');
       setSkills(currentUser.skills || []);
       setExperiences(currentUser.experiences || []);
       setEducation(currentUser.education || []);
@@ -177,21 +183,33 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
     setResumeUploadError(null);
     setIsUploadingResume(true);
+    setResumeUploadProgress(0);
 
     try {
-      const result = await uploadResumeFile(currentUser.id, file);
+      const result = await uploadResumeFile(currentUser.id, file, (progress) => {
+        setResumeUploadProgress(progress);
+      });
+      const now = new Date().toISOString();
       setResumeUrl(result.url);
       setResumeFileName(result.fileName);
+      setResumeStoragePath(result.storagePath);
+      setResumeUploadedAt(now);
 
-      // Auto-save resume URL to user document
+      // Auto-save resume URL and metadata to user document
       await setDoc(doc(db, 'users', currentUser.id), {
         resumeUrl: result.url,
-        updatedAt: new Date().toISOString()
+        resumeFileName: result.fileName,
+        resumeStoragePath: result.storagePath,
+        resumeUploadedAt: now,
+        updatedAt: now
       }, { merge: true });
 
       onUpdateProfile({
         ...currentUser,
-        resumeUrl: result.url
+        resumeUrl: result.url,
+        resumeFileName: result.fileName,
+        resumeStoragePath: result.storagePath,
+        resumeUploadedAt: now
       });
     } catch (err: any) {
       console.error("Resume upload error:", err);
@@ -224,6 +242,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       linkedinUrl,
       portfolioUrl,
       resumeUrl,
+      resumeFileName,
+      resumeStoragePath,
+      resumeUploadedAt,
       skills,
       experiences,
       education,
@@ -254,6 +275,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         linkedinUrl,
         portfolioUrl,
         resumeUrl,
+        resumeFileName,
+        resumeStoragePath,
+        resumeUploadedAt,
         skills,
         experiences,
         education,
@@ -484,7 +508,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                 <label className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer shadow transition-all">
                   {isUploadingResume ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  <span>{isUploadingResume ? 'Uploading to Secure Storage...' : 'Select Resume File'}</span>
+                  <span>{isUploadingResume ? `Uploading to Secure Storage (${resumeUploadProgress}%)...` : 'Select Resume File'}</span>
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,.txt"
@@ -493,6 +517,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     className="hidden"
                   />
                 </label>
+
+                {isUploadingResume && (
+                  <div className="max-w-xs mx-auto w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-2">
+                    <div
+                      className="bg-teal-600 h-full transition-all duration-200"
+                      style={{ width: `${resumeUploadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isUploadingResume && resumeUrl && (
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-teal-600 h-full transition-all duration-200"
+                  style={{ width: `${resumeUploadProgress}%` }}
+                />
               </div>
             )}
 

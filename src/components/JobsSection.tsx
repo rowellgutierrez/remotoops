@@ -84,6 +84,7 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
   const [applicantPhone, setApplicantPhone] = useState('');
   const [applicantLocation, setApplicantLocation] = useState('');
   const [applicantResumeUrl, setApplicantResumeUrl] = useState('');
+  const [applicantResumeFileName, setApplicantResumeFileName] = useState('');
   const [applicantPortfolio, setApplicantPortfolio] = useState('');
   const [applicantLinkedin, setApplicantLinkedin] = useState('');
   const [applicantPitch, setApplicantPitch] = useState('');
@@ -91,6 +92,7 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
   const [aiFeedback, setAiFeedback] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [saveSearchSuccess, setSaveSearchSuccess] = useState(false);
 
@@ -107,12 +109,14 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
     setApplicantPhone(currentUser?.phoneNumber || '');
     setApplicantLocation(currentUser?.location || '100% Remote');
     setApplicantResumeUrl(currentUser?.resumeUrl || '');
+    setApplicantResumeFileName(currentUser?.resumeFileName || 'Saved Resume');
     setApplicantPortfolio(currentUser?.portfolioUrl || '');
     setApplicantLinkedin(currentUser?.linkedinUrl || '');
     setApplicantPitch('');
     setSelectedTools(job.requiredTools ? job.requiredTools.slice(0, 3) : []);
     setAiFeedback(null);
     setIsSubmitted(false);
+    setResumeUploadProgress(0);
   };
 
   // Filter jobs logic
@@ -167,9 +171,13 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
 
     try {
       setIsUploadingResume(true);
+      setResumeUploadProgress(0);
       const userId = currentUser?.id || `guest_${Date.now()}`;
-      const downloadUrl = await uploadResumeFile(file, userId);
-      setApplicantResumeUrl(downloadUrl);
+      const uploadRes = await uploadResumeFile(userId, file, (progress) => {
+        setResumeUploadProgress(progress);
+      });
+      setApplicantResumeUrl(uploadRes.url);
+      setApplicantResumeFileName(uploadRes.fileName);
     } catch (err: any) {
       alert(err.message || "Failed to upload resume. Please try again.");
     } finally {
@@ -211,6 +219,7 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
       phone: applicantPhone.trim(),
       location: applicantLocation.trim(),
       resumeUrl: applicantResumeUrl.trim(),
+      resumeFileName: applicantResumeFileName.trim() || 'Candidate Resume',
       portfolioUrl: applicantPortfolio.trim(),
       linkedinUrl: applicantLinkedin.trim()
     };
@@ -883,20 +892,21 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
                 </div>
 
                 {/* Resume Upload / Link */}
-                <div className="space-y-1.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-900">Resume / CV</label>
+                    <label className="font-bold text-slate-900 text-xs">Resume / CV</label>
                     {applicantResumeUrl && (
-                      <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Resume Attached
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        {applicantResumeFileName ? `${applicantResumeFileName} (Attached)` : 'Resume Attached'}
                       </span>
                     )}
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center gap-2">
-                    <label className="w-full sm:w-auto bg-white border border-slate-300 hover:border-teal-500 text-slate-700 font-bold px-4 py-2 rounded-xl cursor-pointer text-center text-xs flex items-center justify-center gap-1.5 transition-colors">
+                    <label className="w-full sm:w-auto bg-white border border-slate-300 hover:border-teal-500 text-slate-700 font-bold px-4 py-2 rounded-xl cursor-pointer text-center text-xs flex items-center justify-center gap-1.5 transition-colors shrink-0">
                       <Upload className="w-3.5 h-3.5 text-teal-600" />
-                      <span>{isUploadingResume ? 'Uploading...' : 'Upload PDF/Doc'}</span>
+                      <span>{isUploadingResume ? `Uploading ${resumeUploadProgress}%` : 'Upload PDF/Doc'}</span>
                       <input
                         type="file"
                         accept=".pdf,.doc,.docx"
@@ -914,6 +924,15 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
                       className="flex-1 w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 text-xs focus:outline-none font-medium"
                     />
                   </div>
+
+                  {isUploadingResume && (
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-teal-600 h-full transition-all duration-200"
+                        style={{ width: `${resumeUploadProgress}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Pitch / Cover Note */}

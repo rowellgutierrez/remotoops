@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import logoImg from './assets/images/remotoops_logo_1786167434166.jpg';
 import { JobPost, Application, DirectMessage, UserAccount, ScamReport, SavedSearch } from './types';
+import { INITIAL_JOBS } from './data/mockData';
 import { 
   auth, 
   db, 
@@ -183,11 +184,23 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Fetch job posts from Firestore collection 'job_posts'
+  // Fetch and synchronize job posts from Firestore in real-time
   useEffect(() => {
-    const fetchJobsFromFirestore = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'job_posts'));
+    const unsubJobs = onSnapshot(collection(db, 'job_posts'), async (snap) => {
+      if (snap.empty) {
+        // Initialize Firestore with verified jobs if database collection is empty
+        try {
+          for (const job of INITIAL_JOBS) {
+            await setDoc(doc(db, 'job_posts', job.id), {
+              ...job,
+              postedBy: 'system',
+              createdAt: new Date().toISOString()
+            }, { merge: true });
+          }
+        } catch (seedErr) {
+          console.warn("[App] Initial job seed note:", seedErr);
+        }
+      } else {
         const firestoreJobs: JobPost[] = [];
         snap.forEach(d => {
           firestoreJobs.push({ id: d.id, ...d.data() } as JobPost);
@@ -195,54 +208,70 @@ export default function App() {
         if (firestoreJobs.length > 0) {
           setJobs(firestoreJobs);
         }
-      } catch (err) {
-        console.warn("[App] Notice fetching jobs from Firestore:", err);
       }
-    };
+    }, (err) => {
+      console.warn("[App] Notice listening to Firestore jobs:", err);
+    });
 
-    fetchJobsFromFirestore();
+    return () => unsubJobs();
   }, []);
 
-  // Sync user's saved jobs, saved searches, and applications from Firestore
+  // Sync user's saved jobs, saved searches, applications, and conversations in real-time
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      setSavedJobIds([]);
+      setSavedSearches([]);
+      setApplications([]);
+      return;
+    }
 
-    const fetchUserData = async () => {
-      try {
-        // Fetch saved jobs
-        const savedQ = query(collection(db, 'saved_jobs'), where('userId', '==', currentUser.id));
-        const savedSnap = await getDocs(savedQ);
-        const ids: string[] = [];
-        savedSnap.forEach(d => {
-          const data = d.data() as { jobId?: string };
-          if (data && data.jobId) ids.push(data.jobId);
-        });
-        setSavedJobIds(Array.from(new Set(ids)));
+    // 1. Real-time saved jobs
+    const savedQ = query(collection(db, 'saved_jobs'), where('userId', '==', currentUser.id));
+    const unsubSaved = onSnapshot(savedQ, (savedSnap) => {
+      const ids: string[] = [];
+      savedSnap.forEach(d => {
+        const data = d.data() as { jobId?: string };
+        if (data && data.jobId) ids.push(data.jobId);
+      });
+      setSavedJobIds(Array.from(new Set(ids)));
+    }, (err) => {
+      console.warn("[App] Saved jobs listener error:", err);
+    });
 
-        // Fetch saved searches
-        const searchQ = query(collection(db, 'saved_searches'), where('userId', '==', currentUser.id));
-        const searchSnap = await getDocs(searchQ);
-        const searchesList: SavedSearch[] = [];
-        searchSnap.forEach(d => {
-          searchesList.push({ id: d.id, ...d.data() } as SavedSearch);
-        });
-        setSavedSearches(searchesList);
+    // 2. Real-time saved searches
+    const searchQ = query(collection(db, 'saved_searches'), where('userId', '==', currentUser.id));
+    const unsubSearches = onSnapshot(searchQ, (searchSnap) => {
+      const searchesList: SavedSearch[] = [];
+      searchSnap.forEach(d => {
+        searchesList.push({ id: d.id, ...d.data() } as SavedSearch);
+      });
+      setSavedSearches(searchesList);
+    }, (err) => {
+      console.warn("[App] Saved searches listener error:", err);
+    });
 
-        // Fetch applications
-        const appsQ = query(collection(db, 'applications'), where('candidateId', '==', currentUser.id));
-        const appsSnap = await getDocs(appsQ);
-        const userApps: Application[] = [];
-        appsSnap.forEach(d => {
-          userApps.push({ id: d.id, ...d.data() } as Application);
-        });
-        setApplications(userApps);
-      } catch (err) {
-        console.warn("[App] Notice fetching user data:", err);
-      }
+    // 3. Real-time applications (applicant & employer view)
+    const isEmployerRole = currentUser.role === 'client' || currentUser.role === 'employer' || currentUser.role === 'admin';
+    const appsQ = isEmployerRole
+      ? collection(db, 'applications')
+      : query(collection(db, 'applications'), where('candidateId', '==', currentUser.id));
+
+    const unsubApps = onSnapshot(appsQ, (appsSnap) => {
+      const userApps: Application[] = [];
+      appsSnap.forEach(d => {
+        userApps.push({ id: d.id, ...d.data() } as Application);
+      });
+      setApplications(userApps);
+    }, (err) => {
+      console.warn("[App] Applications listener error:", err);
+    });
+
+    return () => {
+      unsubSaved();
+      unsubSearches();
+      unsubApps();
     };
-
-    fetchUserData();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.role]);
 
   // AI helper functions
   const safeParseJsonResponse = async (res: Response) => {
@@ -373,7 +402,7 @@ export default function App() {
   const handleApplyToJob = async (job: JobPost, pitch: string, tools: string[], candidateDetails?: any) => {
     const isExternal = job.applicationMethod === 'external';
     const now = new Date().toISOString();
-    const candidateId = currentUser ? currentUser.id : 'user-me';
+    const candidateId = currentUser ? currentUser.id : `guest_${Date.now()}`;
 
     const appId = `${candidateId}_${job.id}`;
     const newApp: Application = {
@@ -382,8 +411,8 @@ export default function App() {
       jobTitle: job.title,
       company: job.company,
       candidateId: candidateId,
-      candidateName: candidateDetails?.name || currentUser?.name || 'Member',
-      candidateEmail: candidateDetails?.email || currentUser?.email || 'member@remotoops.dev',
+      candidateName: candidateDetails?.name || currentUser?.name || 'Applicant',
+      candidateEmail: candidateDetails?.email || currentUser?.email || 'applicant@remotoops.dev',
       candidatePhone: candidateDetails?.phone || currentUser?.phoneNumber,
       candidateLocation: candidateDetails?.location || currentUser?.location,
       resumeUrl: candidateDetails?.resumeUrl || currentUser?.resumeUrl,
@@ -399,30 +428,74 @@ export default function App() {
 
     setApplications(prev => [newApp, ...prev.filter(a => a.id !== appId)]);
 
-    if (currentUser?.id) {
-      try {
-        await setDoc(doc(db, 'applications', appId), {
-          ...newApp,
-          appliedAt: now
-        });
-      } catch (err) {
-        console.error("Firestore application submission error:", err);
+    try {
+      await setDoc(doc(db, 'applications', appId), {
+        ...newApp,
+        employerId: job.postedBy || 'employer',
+        appliedAt: now,
+        updatedAt: now
+      }, { merge: true });
+
+      // Auto-save resume URL to user profile if user is logged in
+      if (currentUser?.id && candidateDetails?.resumeUrl) {
+        await setDoc(doc(db, 'users', currentUser.id), {
+          resumeUrl: candidateDetails.resumeUrl,
+          resumeFileName: candidateDetails.resumeFileName || 'Resume Document',
+          updatedAt: now
+        }, { merge: true });
       }
+    } catch (err) {
+      console.error("Firestore application submission error:", err);
     }
   };
 
-  const handleSendMessage = (text: string, receiverId: string, receiverName: string, conversationId = 'conv-1') => {
+  const handleSendMessage = async (text: string, receiverId: string, receiverName: string, conversationId = 'conv-1') => {
+    const senderId = currentUser ? currentUser.id : 'user-me';
+    const senderName = currentUser ? currentUser.name : 'Applicant';
+    const now = new Date().toISOString();
+    const msgId = `msg-${Date.now()}`;
+
     const newMsg: DirectMessage = {
-      id: `msg-${Date.now()}`,
+      id: msgId,
       conversationId,
-      senderId: currentUser ? currentUser.id : 'user-me',
+      senderId,
       receiverId,
-      senderName: currentUser ? currentUser.name : 'Applicant',
-      senderAvatar: '',
+      senderName,
+      senderAvatar: currentUser?.avatarUrl || '',
       text,
       timestamp: 'Just now'
     };
+
     setMessages(prev => [...prev, newMsg]);
+
+    if (currentUser?.id) {
+      try {
+        // Ensure conversation document
+        await setDoc(doc(db, 'conversations', conversationId), {
+          id: conversationId,
+          participants: [currentUser.id, receiverId],
+          lastMessage: text,
+          lastMessageSenderName: senderName,
+          lastMessageAt: now,
+          updatedAt: now
+        }, { merge: true });
+
+        // Add to subcollection
+        await setDoc(doc(db, 'conversations', conversationId, 'messages', msgId), {
+          id: msgId,
+          conversationId,
+          senderId,
+          receiverId,
+          senderName,
+          senderAvatar: currentUser?.avatarUrl || '',
+          text,
+          createdAt: now,
+          read: false
+        });
+      } catch (err) {
+        console.error("Firestore message send error:", err);
+      }
+    }
   };
 
   const handleUpdateApplicationStatus = async (appId: string, status: Application['status'], notes?: string) => {
@@ -664,6 +737,8 @@ export default function App() {
               jobs={jobs}
               applications={applications}
               onOpenPostJob={() => setIsPostJobModalOpen(true)}
+              onOpenEmployerPricing={() => setIsEmployerPricingOpen(true)}
+              onOpenAccountModal={() => setIsAccountModalOpen(true)}
               onOpenAuthModal={() => {
                 setAuthModalMode('login');
                 setIsAuthModalOpen(true);

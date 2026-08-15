@@ -10,7 +10,8 @@ import {
   User, 
   Building2, 
   MessageSquare, 
-  Sparkles, 
+  Sparkles,
+  CreditCard,
   Sun, 
   Moon, 
   LogOut, 
@@ -35,6 +36,7 @@ interface SidebarProps {
   onLogout: () => void;
   onOpenAdminConsole?: () => void;
   onOpenCareersModal?: () => void;
+  onOpenPricingModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -51,7 +53,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAuthModal,
   onLogout,
   onOpenAdminConsole,
-  onOpenCareersModal
+  onOpenCareersModal,
+  onOpenPricingModal
 }) => {
   return (
     <aside className="w-68 lg:w-72 shrink-0 bg-white border-r border-slate-200 min-h-screen flex flex-col justify-between p-5 select-none z-30 transition-colors shadow-xs">
@@ -220,6 +223,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {unreadMessagesCount}
               </span>
             )}
+          </button>
+
+          {/* Pricing Plans */}
+          <button
+            onClick={() => onOpenPricingModal && onOpenPricingModal()}
+            className="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-50 transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <CreditCard className="w-5 h-5 text-slate-500" />
+              <span className="text-[13px]">Pricing Plans</span>
+            </div>
+            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+              Plans
+            </span>
           </button>
 
         </div>

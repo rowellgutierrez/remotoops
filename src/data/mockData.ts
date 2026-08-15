@@ -1,9 +1,6 @@
 import { JobPost, CandidateProfile, FeedPost, Application, MentorshipModule } from '../types';
 
-export const INITIAL_JOBS: JobPost[] = [];
-
-/* Removed legacy seed jobs */
-const _LEGACY_JOBS_REMOVED: JobPost[] = [
+export const INITIAL_JOBS: JobPost[] = [
   {
     id: 'job-1',
     title: 'Junior Remote Executive Assistant (Mentorship Program)',
