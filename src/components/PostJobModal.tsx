@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { JobPost, RoleCategory, TimezoneOverlap, CompensationType, ExperienceLevel, UserAccount } from '../types';
-import { X, Sparkles, Send, Briefcase, Zap, ShieldCheck, AlertCircle, Building2 } from 'lucide-react';
+import { X, Send, Briefcase, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface PostJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddJob: (job: JobPost) => void;
-  onEnhanceJobWithAI: (data: any) => Promise<any>;
   currentUser?: UserAccount | null;
   onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
   onOpenPricingModal?: () => void;
@@ -35,7 +34,6 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   isOpen,
   onClose,
   onAddJob,
-  onEnhanceJobWithAI,
   currentUser,
   onOpenAuthModal,
   onOpenPricingModal
@@ -60,49 +58,35 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   const [externalApplyUrl, setExternalApplyUrl] = useState('');
   const [experienceLevelNum, setExperienceLevelNum] = useState<ExperienceLevel>('beginner');
 
-  const [isEnhancing, setIsEnhancing] = useState(false);
-  const [aiEnhancedData, setAiEnhancedData] = useState<any>(null);
-
   if (!isOpen) return null;
 
   // Authorization validation: if user is not logged in or is a candidate
-  const isAuthorizedEmployer = currentUser && (
-    currentUser.role === 'client' || 
-    currentUser.role === 'employer' || 
-    currentUser.role === 'admin'
+  const isAuthorizedEmployer = Boolean(
+    currentUser?.id && (
+      currentUser.role === 'client' || 
+      currentUser.role === 'employer' || 
+      currentUser.role === 'admin'
+    )
   );
-
-  const handleRunAiEnhance = async () => {
-    if (!title.trim() && !description.trim()) return;
-
-    setIsEnhancing(true);
-    try {
-      const res = await onEnhanceJobWithAI({
-        title,
-        company,
-        roleType: customRoleCategory,
-        rawDescription: description,
-        mentorshipGoals: `Hands-on training and career growth for remote talent in ${customRoleCategory}`
-      });
-
-      if (res && res.success && res.data) {
-        setAiEnhancedData(res.data);
-        if (res.data.enhancedTitle) setTitle(res.data.enhancedTitle);
-        if (res.data.summary) setDescription(res.data.summary);
-      } else {
-        alert(res?.error || "AI service is temporarily unavailable. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("AI service is temporarily unavailable. Please try again.");
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !company.trim()) return;
+
+    if (!currentUser?.id) {
+      alert('You must be signed in as an employer to post a job opening.');
+      if (onOpenAuthModal) onOpenAuthModal('login');
+      return;
+    }
+
+    if (!isAuthorizedEmployer) {
+      alert('Your account is registered as a candidate. Please switch to or register an employer account to post jobs.');
+      return;
+    }
+
+    if (!title.trim() || !company.trim()) {
+      alert('Please provide a job title and company name.');
+      return;
+    }
 
     // Validate external URL if external application selected
     if (applicationMethod === 'external') {
@@ -169,7 +153,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
         'Execute core tasks and deliver regular project updates',
         'Maintain high attention to detail and clear communication'
       ],
-      learningOutcomes: aiEnhancedData?.mentorshipHighlights || [
+      learningOutcomes: [
         `Master essential remote workflows in ${customRoleCategory}`,
         'Build real-world professional portfolio deliverables',
         'Receive direct guidance and feedback from experienced team leads'
@@ -187,7 +171,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       viewsCount: 0,
       savesCount: 0,
       applicationsCount: 0,
-      postedBy: currentUser?.id || 'employer'
+      postedBy: currentUser.id
     };
 
     onAddJob(newJob);
@@ -421,19 +405,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-800">Role Description & Expectations:</label>
-              <button
-                type="button"
-                onClick={handleRunAiEnhance}
-                disabled={isEnhancing || (!title && !description)}
-                className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 flex items-center gap-1 disabled:opacity-40"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                {isEnhancing ? 'Polishing with AI...' : 'AI Polish & Format'}
-              </button>
-            </div>
-
+            <label className="font-bold text-slate-800">Role Description & Expectations:</label>
             <textarea
               rows={4}
               value={description}

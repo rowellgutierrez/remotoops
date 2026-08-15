@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserAccount, RoleCategory, ROLE_CATEGORY_LABELS } from '../types';
-import logoImg from '../assets/images/remotoops_logo_1786167434166.jpg';
+import logoImg from '../assets/images/remotoops_logo.png';
 import { 
   auth, 
   db, 

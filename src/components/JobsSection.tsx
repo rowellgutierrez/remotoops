@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import logoImg from '../assets/images/remotoops_logo_1786167434166.jpg';
+import logoImg from '../assets/images/remotoops_logo.png';
 import heroPhoto from '../assets/images/remote_pro_hero_1786683107206.jpg';
 import { JobPost, RoleCategory, TimezoneOverlap, CompensationType, ROLE_CATEGORY_LABELS, UserAccount } from '../types';
 import { 
@@ -8,11 +8,10 @@ import {
   Clock, 
   DollarSign, 
   CheckCircle2, 
-  Sparkles, 
   Globe2, 
   Briefcase, 
   Send, 
-  X,
+  X, 
   ShieldCheck, 
   Flag, 
   ChevronRight, 
@@ -27,7 +26,8 @@ import {
   Compass,
   FileCheck2,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 import { uploadResumeFile } from '../lib/resumeUploader';
@@ -40,7 +40,6 @@ interface JobsSectionProps {
   onOpenAuthModal: (mode?: 'login' | 'signup') => void;
   onApply: (job: JobPost, pitch: string, tools: string[], candidateDetails?: any) => void;
   onOpenPostJob: () => void;
-  onAnalyzePitchWithAI: (targetRole: string, draftPitch: string) => Promise<any>;
   onOpenReportModal?: (jobId?: string, jobTitle?: string, company?: string) => void;
   onOpenSafetyHub?: () => void;
   onOpenAccountModal?: () => void;
@@ -60,7 +59,6 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
   onOpenAuthModal,
   onApply,
   onOpenPostJob,
-  onAnalyzePitchWithAI,
   onOpenReportModal,
   onOpenSafetyHub,
   onOpenAccountModal,
@@ -89,8 +87,6 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
   const [applicantLinkedin, setApplicantLinkedin] = useState('');
   const [applicantPitch, setApplicantPitch] = useState('');
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [aiFeedback, setAiFeedback] = useState<any>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [resumeUploadProgress, setResumeUploadProgress] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -114,7 +110,6 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
     setApplicantLinkedin(currentUser?.linkedinUrl || '');
     setApplicantPitch('');
     setSelectedTools(job.requiredTools ? job.requiredTools.slice(0, 3) : []);
-    setAiFeedback(null);
     setIsSubmitted(false);
     setResumeUploadProgress(0);
   };
@@ -169,43 +164,24 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!currentUser?.id) {
+      alert("Please sign in or register to upload your resume.");
+      onOpenAuthModal('login');
+      return;
+    }
+
     try {
       setIsUploadingResume(true);
       setResumeUploadProgress(0);
-      const userId = currentUser?.id || `guest_${Date.now()}`;
-      const uploadRes = await uploadResumeFile(userId, file, (progress) => {
+      const uploadRes = await uploadResumeFile(currentUser.id, file, (progress) => {
         setResumeUploadProgress(progress);
       });
       setApplicantResumeUrl(uploadRes.url);
       setApplicantResumeFileName(uploadRes.fileName);
     } catch (err: any) {
-      alert(err.message || "Failed to upload resume. Please try again.");
+      alert(err.message || "Failed to upload resume. Please check your file and try again.");
     } finally {
       setIsUploadingResume(false);
-    }
-  };
-
-  const handleRunAiPitchAnalysis = async () => {
-    if (!applicantPitch.trim() || !activeJobModal) return;
-    setIsAnalyzing(true);
-    try {
-      const result = await onAnalyzePitchWithAI(
-        activeJobModal.roleCategory,
-        applicantPitch
-      );
-      if (result && result.success && result.data) {
-        setAiFeedback(result.data);
-        if (result.data.rewrittenPitch) {
-          setApplicantPitch(result.data.rewrittenPitch);
-        }
-      } else {
-        alert(result?.error || "AI pitch assistant is temporarily unavailable.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("AI pitch assistant is temporarily unavailable.");
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -213,15 +189,26 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
     e.preventDefault();
     if (!activeJobModal) return;
 
+    if (!currentUser?.id) {
+      alert("Please sign in to submit your job application.");
+      onOpenAuthModal('login');
+      return;
+    }
+
+    if (!applicantResumeUrl.trim()) {
+      alert("Please upload your resume before submitting your application.");
+      return;
+    }
+
     const candidateDetails = {
-      name: applicantName.trim() || currentUser?.name || 'Applicant',
-      email: applicantEmail.trim() || currentUser?.email || '',
-      phone: applicantPhone.trim(),
-      location: applicantLocation.trim(),
+      name: applicantName.trim() || currentUser.name || 'Applicant',
+      email: applicantEmail.trim() || currentUser.email || '',
+      phone: applicantPhone.trim() || currentUser.phoneNumber || '',
+      location: applicantLocation.trim() || currentUser.location || '',
       resumeUrl: applicantResumeUrl.trim(),
       resumeFileName: applicantResumeFileName.trim() || 'Candidate Resume',
-      portfolioUrl: applicantPortfolio.trim(),
-      linkedinUrl: applicantLinkedin.trim()
+      portfolioUrl: applicantPortfolio.trim() || currentUser.portfolioUrl || '',
+      linkedinUrl: applicantLinkedin.trim() || currentUser.linkedinUrl || ''
     };
 
     onApply(activeJobModal, applicantPitch, selectedTools, candidateDetails);
@@ -268,15 +255,17 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-3.5 cursor-pointer group"
+              className="inline-flex items-center gap-4 cursor-pointer group"
               title="RemotoOps Remote Work Ecosystem"
             >
-              <img 
-                src={logoImg} 
-                alt="RemotoOps" 
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border-2 border-indigo-500/20 object-cover shadow-md group-hover:scale-105 transition-transform shrink-0" 
-              />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-white border border-indigo-100 shadow-md p-1.5 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                <img 
+                  src={logoImg} 
+                  alt="RemotoOps" 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain" 
+                />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">RemotoOps</span>
@@ -515,21 +504,27 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
               <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-slate-800 text-sm">No remote jobs match your filters</h3>
+              <h3 className="font-bold text-slate-800 text-sm">
+                {jobs.length === 0 ? 'No jobs available yet.' : 'No remote jobs match your filters'}
+              </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Try searching for broader keywords, clearing specific filters, or checking back soon.
+                {jobs.length === 0 
+                  ? 'New verified remote job listings will appear here as soon as employers publish them.'
+                  : 'Try searching for broader keywords, clearing specific filters, or checking back soon.'}
               </p>
-              <button
-                onClick={() => {
-                  setSelectedCategory('all');
-                  setSelectedJobType('all');
-                  setSelectedLocation('all');
-                  setSearchQuery('');
-                }}
-                className="px-4 py-2 bg-teal-600 text-white font-bold text-xs rounded-xl shadow-xs"
-              >
-                Clear All Filters
-              </button>
+              {jobs.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSelectedCategory('all');
+                    setSelectedJobType('all');
+                    setSelectedLocation('all');
+                    setSearchQuery('');
+                  }}
+                  className="px-4 py-2 bg-teal-600 text-white font-bold text-xs rounded-xl shadow-xs"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -937,19 +932,7 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
 
                 {/* Quick Pitch / Cover Note */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-800">Quick Introduction / Cover Pitch:</label>
-                    <button
-                      type="button"
-                      onClick={handleRunAiPitchAnalysis}
-                      disabled={isAnalyzing || !applicantPitch.trim()}
-                      className="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 flex items-center gap-1 disabled:opacity-40"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                      {isAnalyzing ? 'Polishing...' : 'AI Pitch Polish'}
-                    </button>
-                  </div>
-
+                  <label className="font-bold text-slate-800">Quick Introduction / Cover Pitch:</label>
                   <textarea
                     rows={3}
                     value={applicantPitch}
@@ -958,14 +941,6 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
                     className="w-full bg-white border border-slate-300 rounded-2xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-xs"
                   />
                 </div>
-
-                {/* AI Pitch Feedback if available */}
-                {aiFeedback && (
-                  <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 space-y-1 text-teal-950 text-xs">
-                    <p className="font-bold text-teal-900">✨ AI Suggestions applied:</p>
-                    <p className="text-[11px] text-teal-800">{aiFeedback.clarityFeedback || "Pitch optimized for remote recruiters."}</p>
-                  </div>
-                )}
 
                 {/* Report Scam Link */}
                 {onOpenReportModal && (

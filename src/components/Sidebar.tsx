@@ -1,5 +1,5 @@
 import React from 'react';
-import logoImg from '../assets/images/remotoops_logo_1786167434166.jpg';
+import logoImg from '../assets/images/remotoops_logo.png';
 import { UserAccount } from '../types';
 import { AppTab } from './Header';
 import { 
@@ -10,15 +10,15 @@ import {
   User, 
   Building2, 
   MessageSquare, 
-  Sparkles,
-  CreditCard,
+  Sparkles, 
+  CreditCard, 
   Sun, 
   Moon, 
   LogOut, 
   LogIn, 
-  ShieldCheck,
-  ChevronRight,
-  ExternalLink
+  ShieldCheck, 
+  ChevronRight, 
+  ExternalLink 
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -62,21 +62,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Top Section: Logo & Main Navigation */}
       <div className="space-y-6">
         
-        {/* Large Prominent Brand Logo Header (~2x size) */}
+        {/* Large Prominent Brand Logo Header */}
         <div 
           onClick={() => {
             setActiveTab('find_jobs');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 p-2.5 cursor-pointer group rounded-2xl hover:bg-indigo-50/50 transition-all border border-transparent hover:border-indigo-100"
+          className="flex items-center gap-3 p-2 cursor-pointer group rounded-2xl hover:bg-indigo-50/50 transition-all border border-transparent hover:border-indigo-100"
           title="Return to RemotoOps Home"
         >
-          <img 
-            src={logoImg} 
-            alt="RemotoOps Logo" 
-            referrerPolicy="no-referrer"
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-indigo-500/20 object-cover shadow-md group-hover:scale-105 transition-transform shrink-0" 
-          />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-indigo-100 shadow-sm p-1 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+            <img 
+              src={logoImg} 
+              alt="RemotoOps Logo" 
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain" 
+            />
+          </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-black text-2xl sm:text-3xl tracking-tight text-slate-900 leading-tight">RemotoOps</span>

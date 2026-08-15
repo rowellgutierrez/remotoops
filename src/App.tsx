@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import logoImg from './assets/images/remotoops_logo_1786167434166.jpg';
+import logoImg from './assets/images/remotoops_logo.png';
 import { JobPost, Application, DirectMessage, UserAccount, ScamReport, SavedSearch } from './types';
-import { INITIAL_JOBS } from './data/mockData';
 import { 
   auth, 
   db, 
@@ -184,31 +183,14 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Fetch and synchronize job posts from Firestore in real-time
+  // Fetch and synchronize job posts from Firestore in real-time (pure source of truth)
   useEffect(() => {
-    const unsubJobs = onSnapshot(collection(db, 'job_posts'), async (snap) => {
-      if (snap.empty) {
-        // Initialize Firestore with verified jobs if database collection is empty
-        try {
-          for (const job of INITIAL_JOBS) {
-            await setDoc(doc(db, 'job_posts', job.id), {
-              ...job,
-              postedBy: 'system',
-              createdAt: new Date().toISOString()
-            }, { merge: true });
-          }
-        } catch (seedErr) {
-          console.warn("[App] Initial job seed note:", seedErr);
-        }
-      } else {
-        const firestoreJobs: JobPost[] = [];
-        snap.forEach(d => {
-          firestoreJobs.push({ id: d.id, ...d.data() } as JobPost);
-        });
-        if (firestoreJobs.length > 0) {
-          setJobs(firestoreJobs);
-        }
-      }
+    const unsubJobs = onSnapshot(collection(db, 'job_posts'), (snap) => {
+      const firestoreJobs: JobPost[] = [];
+      snap.forEach(d => {
+        firestoreJobs.push({ id: d.id, ...d.data() } as JobPost);
+      });
+      setJobs(firestoreJobs);
     }, (err) => {
       console.warn("[App] Notice listening to Firestore jobs:", err);
     });
@@ -251,9 +233,12 @@ export default function App() {
     });
 
     // 3. Real-time applications (applicant & employer view)
-    const isEmployerRole = currentUser.role === 'client' || currentUser.role === 'employer' || currentUser.role === 'admin';
-    const appsQ = isEmployerRole
+    const isEmployerRole = currentUser.role === 'client' || currentUser.role === 'employer';
+    const isAdminRole = currentUser.role === 'admin';
+    const appsQ = isAdminRole
       ? collection(db, 'applications')
+      : isEmployerRole
+      ? query(collection(db, 'applications'), where('employerId', '==', currentUser.id))
       : query(collection(db, 'applications'), where('candidateId', '==', currentUser.id));
 
     const unsubApps = onSnapshot(appsQ, (appsSnap) => {
@@ -273,61 +258,24 @@ export default function App() {
     };
   }, [currentUser?.id, currentUser?.role]);
 
-  // AI helper functions
-  const safeParseJsonResponse = async (res: Response) => {
-    try {
-      const text = await res.text();
-      return JSON.parse(text);
-    } catch {
-      return { success: false, error: 'AI service is temporarily unavailable.' };
-    }
-  };
-
-  const handleAnalyzePitchWithAI = async (targetRole: string, draftPitch: string) => {
-    try {
-      const res = await fetch('/api/ai/analyze-pitch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetRole,
-          userPitch: draftPitch,
-          userBackground: 'Remote candidate applying via RemotoOps'
-        })
-      });
-      const json = await safeParseJsonResponse(res);
-      if (res.ok && json.success) return json;
-      return { success: false, error: json.error || 'AI service is temporarily unavailable.' };
-    } catch {
-      return { success: false, error: 'AI service is temporarily unavailable.' };
-    }
-  };
-
-  const handleEnhanceJobWithAI = async (jobData: any) => {
-    try {
-      const res = await fetch('/api/ai/enhance-job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData)
-      });
-      const json = await safeParseJsonResponse(res);
-      if (res.ok && json.success) return json;
-      return { success: false, error: json.error || 'AI service is temporarily unavailable.' };
-    } catch {
-      return { success: false, error: 'AI service is temporarily unavailable.' };
-    }
-  };
-
   // Job actions
   const handleAddJob = async (newJob: JobPost) => {
-    setJobs(prev => [newJob, ...prev]);
+    if (!currentUser?.id) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    const jobToSave: JobPost = {
+      ...newJob,
+      postedBy: currentUser.id,
+      postedDate: newJob.postedDate || 'Just now'
+    };
+
     try {
-      await setDoc(doc(db, 'job_posts', newJob.id), {
-        ...newJob,
-        postedBy: currentUser?.id || 'anonymous',
-        createdAt: new Date().toISOString()
-      }, { merge: true });
+      await setDoc(doc(db, 'job_posts', jobToSave.id), jobToSave, { merge: true });
     } catch (err) {
       console.error("Firestore job creation error:", err);
+      alert("Failed to save job to Firestore. Please verify your permissions and try again.");
     }
   };
 
@@ -400,9 +348,14 @@ export default function App() {
   };
 
   const handleApplyToJob = async (job: JobPost, pitch: string, tools: string[], candidateDetails?: any) => {
+    if (!currentUser?.id) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     const isExternal = job.applicationMethod === 'external';
     const now = new Date().toISOString();
-    const candidateId = currentUser ? currentUser.id : `guest_${Date.now()}`;
+    const candidateId = currentUser.id;
 
     const appId = `${candidateId}_${job.id}`;
     const newApp: Application = {
@@ -446,6 +399,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("Firestore application submission error:", err);
+      alert("Failed to submit application. Please check your connection and try again.");
     }
   };
 
@@ -543,6 +497,7 @@ export default function App() {
           onLogout={handleLogout}
           onOpenAdminConsole={() => setIsAdminDashboardOpen(true)}
           onOpenCareersModal={() => setActiveTab('find_jobs')}
+          onOpenPricingModal={() => setIsEmployerPricingOpen(true)}
         />
       </div>
 
@@ -588,6 +543,10 @@ export default function App() {
                 onLogout={handleLogout}
                 onOpenAdminConsole={() => {
                   setIsAdminDashboardOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                onOpenPricingModal={() => {
+                  setIsEmployerPricingOpen(true);
                   setIsMobileSidebarOpen(false);
                 }}
               />
@@ -639,7 +598,6 @@ export default function App() {
               }}
               onApply={handleApplyToJob}
               onOpenPostJob={() => setIsPostJobModalOpen(true)}
-              onAnalyzePitchWithAI={handleAnalyzePitchWithAI}
               onOpenReportModal={(id, title, company) => {
                 setReportJobData({ id, title, company });
                 setIsReportModalOpen(true);
@@ -661,7 +619,7 @@ export default function App() {
             />
           )}
 
-          {/* SAVED JOBS TAB (Fixed & Rock Solid) */}
+          {/* SAVED JOBS TAB */}
           {activeTab === 'saved_jobs' && (
             <SavedJobsSection
               savedJobIds={savedJobIds}
@@ -773,12 +731,14 @@ export default function App() {
         <footer className="bg-white border-t border-slate-200 text-slate-500 py-6 text-xs mt-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <img 
-                src={logoImg} 
-                alt="RemotoOps" 
-                referrerPolicy="no-referrer"
-                className="w-6 h-6 rounded-lg border border-teal-500/30 object-cover" 
-              />
+              <div className="w-6 h-6 rounded-lg bg-white border border-teal-500/30 p-0.5 flex items-center justify-center">
+                <img 
+                  src={logoImg} 
+                  alt="RemotoOps" 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain" 
+                />
+              </div>
               <p className="font-semibold text-slate-700">
                 RemotoOps • Verified Remote Jobs & Direct Applications
               </p>
@@ -825,7 +785,6 @@ export default function App() {
         isOpen={isPostJobModalOpen}
         onClose={() => setIsPostJobModalOpen(false)}
         onAddJob={handleAddJob}
-        onEnhanceJobWithAI={handleEnhanceJobWithAI}
         currentUser={currentUser}
         onOpenAuthModal={(mode) => {
           setAuthModalMode(mode || 'login');
