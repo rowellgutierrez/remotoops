@@ -476,12 +476,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2 mb-2">
-            <img 
-              src={logoImg} 
-              alt="RemotoOps Logo" 
-              referrerPolicy="no-referrer"
-              className="w-8 h-8 rounded-full border border-teal-400 object-cover shadow-md" 
-            />
+            <div className="w-8 h-8 rounded-xl bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
+              <img 
+                src={logoImg} 
+                alt="RemotoOps Logo" 
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain" 
+              />
+            </div>
             <span className="font-extrabold text-lg text-white">RemotoOps Portal</span>
           </div>
 
@@ -865,7 +867,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         required
                         value={companyName}
                         onChange={(e) => setCompany(e.target.value)}
-                        placeholder="e.g. Apex Global Solutions"
+                        placeholder="e.g. Acme Remote Solutions"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 pl-9 pr-3 py-2 focus:outline-none"
                       />
                     </div>

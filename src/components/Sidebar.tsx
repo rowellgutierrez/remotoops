@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import logoImg from '../assets/images/remotoops_logo.png';
 import { UserAccount } from '../types';
 import { AppTab } from './Header';
@@ -56,6 +56,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCareersModal,
   onOpenPricingModal
 }) => {
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentUser?.avatar]);
+
   return (
     <aside className="w-68 lg:w-72 shrink-0 bg-white border-r border-slate-200 min-h-screen flex flex-col justify-between p-5 select-none z-30 transition-colors shadow-xs">
       
@@ -288,9 +294,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {currentUser ? (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-              </div>
+              {currentUser.avatar && !avatarError ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-xl object-cover border border-slate-200 shrink-0 shadow-xs"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
                 <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>

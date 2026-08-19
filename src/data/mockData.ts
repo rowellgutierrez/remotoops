@@ -94,7 +94,7 @@ export const INITIAL_FEED: FeedPost[] = [
   {
     id: 'post-1',
     authorName: 'Sarah Jenkins',
-    authorTitle: 'Chief of Staff @ Apex Global | Verified Client & EA Mentor',
+    authorTitle: 'Chief of Staff @ Horizon Scale | Verified Client & EA Mentor',
     authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     authorRoleType: 'mentor',
     roleCategory: 'executive_assistant',
@@ -360,20 +360,4 @@ export const MENTORSHIP_MODULES: MentorshipModule[] = [
   }
 ];
 
-export const INITIAL_APPLICATIONS: Application[] = [
-  {
-    id: 'app-101',
-    jobId: 'job-1',
-    jobTitle: 'Junior Remote Executive Assistant (Mentorship Program)',
-    company: 'Apex Global Ventures',
-    candidateName: 'Ananya Sharma',
-    candidateAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    candidateEmail: 'ananya.sharma@example.com',
-    coverPitch: 'Hi Sarah! I have completed the RemotoOps Executive Assistant Track and built a multi-timezone calendar SOP. I am eager to contribute 20+ hours/week to Apex Global while learning under your 10+ year executive mentorship!',
-    toolExperience: ['Google Workspace', 'Notion', 'Slack', 'Loom'],
-    status: 'intro_chat',
-    appliedAt: 'Yesterday',
-    mentorNotes: 'Excellent pitch and great score on calendar triage module! Intro chat scheduled for Friday.',
-    candidateId: 'cand-1'
-  }
-];
+export const INITIAL_APPLICATIONS: Application[] = [];

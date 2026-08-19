@@ -387,21 +387,21 @@ export const FeedSection: React.FC<FeedSectionProps> = ({
         {/* Right Sidebar Widgets */}
         <div className="space-y-6">
           
-          {/* AI Mentorship Banner Card */}
+          {/* Mentorship & Career Guides Card */}
           <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-5 text-white shadow-lg border border-slate-700 space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
-              <span className="text-xs font-bold text-teal-400 uppercase tracking-wider">AI Skill Accelerator</span>
+              <span className="text-xs font-bold text-teal-400 uppercase tracking-wider">Career Accelerator</span>
             </div>
-            <h3 className="font-bold text-base leading-snug">New to EA, Admin, or SMM? Polish Your Pitch with AI</h3>
+            <h3 className="font-bold text-base leading-snug">New to EA, Admin, or SMM? Master Remote Work</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Use our Gemini AI coach to analyze your cover letter, build a custom remote pitch, and practice role-specific scenario questions.
+              Explore step-by-step interview guides, ATS resume optimization, and asynchronous work best practices tailored for beginners.
             </p>
             <button
               onClick={onNavigateToMentorship}
               className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
             >
-              Open AI Mentorship Studio
+              Open Interview Guides
             </button>
           </div>
 

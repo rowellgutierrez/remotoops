@@ -5,7 +5,7 @@ import { X, Send, Briefcase, ShieldCheck, AlertCircle } from 'lucide-react';
 interface PostJobModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddJob: (job: JobPost) => void;
+  onAddJob: (job: JobPost) => Promise<void> | void;
   currentUser?: UserAccount | null;
   onOpenAuthModal?: (mode?: 'login' | 'signup') => void;
   onOpenPricingModal?: () => void;
@@ -57,6 +57,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   const [applicationMethod, setApplicationMethod] = useState<'direct' | 'external'>('direct');
   const [externalApplyUrl, setExternalApplyUrl] = useState('');
   const [experienceLevelNum, setExperienceLevelNum] = useState<ExperienceLevel>('beginner');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -69,29 +71,30 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
     )
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     if (!currentUser?.id) {
-      alert('You must be signed in as an employer to post a job opening.');
+      setSubmitError('You must be signed in as an employer to post a job opening.');
       if (onOpenAuthModal) onOpenAuthModal('login');
       return;
     }
 
     if (!isAuthorizedEmployer) {
-      alert('Your account is registered as a candidate. Please switch to or register an employer account to post jobs.');
+      setSubmitError('Your account is registered as a candidate. Please switch to or register an employer account to post jobs.');
       return;
     }
 
     if (!title.trim() || !company.trim()) {
-      alert('Please provide a job title and company name.');
+      setSubmitError('Please provide a job title and company name.');
       return;
     }
 
     // Validate external URL if external application selected
     if (applicationMethod === 'external') {
       if (!externalApplyUrl.trim() || (!externalApplyUrl.startsWith('http://') && !externalApplyUrl.startsWith('https://'))) {
-        alert('Please enter a valid company website URL starting with http:// or https://');
+        setSubmitError('Please enter a valid company website URL starting with http:// or https://');
         return;
       }
     }
@@ -105,7 +108,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
     ];
     const foundScamTerm = scamTerms.find(term => lowerText.includes(term));
     if (foundScamTerm) {
-      alert(`Safety Policy Violation: Your posting contains text associated with recruitment scams ("${foundScamTerm}"). RemotoOps strictly prohibits asking applicants for payments, fees, financial deposits, or sensitive credentials.`);
+      setSubmitError(`Safety Policy Violation: Your posting contains text associated with recruitment scams ("${foundScamTerm}"). RemotoOps strictly prohibits asking applicants for payments, fees, financial deposits, or sensitive credentials.`);
       return;
     }
 
@@ -130,24 +133,24 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
 
     const newJob: JobPost = {
       id: `job-${Date.now()}`,
-      title,
-      company,
+      title: title.trim(),
+      company: company.trim(),
       companyLogo: '',
-      clientName: clientName.trim() || company,
+      clientName: clientName.trim() || company.trim(),
       clientTitle: clientTitle.trim() || 'Hiring Manager',
       clientAvatar: '',
       clientLocation: clientLocation.trim() || '100% Remote / Worldwide',
       roleCategory: mappedCategory,
-      compensation,
+      compensation: compensation.trim(),
       compensationType,
       hoursPerWeek,
       timezone,
-      mentorName,
-      mentorRole,
+      mentorName: mentorName.trim(),
+      mentorRole: mentorRole.trim(),
       isMentorshipGuaranteed: true,
       isOpenToZeroExperience: experienceLevelNum === 'no_experience' || experienceLevelNum === 'beginner',
       isVerifiedSafeClient: true,
-      description,
+      description: description.trim(),
       responsibilities: [
         'Collaborate with remote team members across asynchronous channels',
         'Execute core tasks and deliver regular project updates',
@@ -165,7 +168,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
 
       // Application Method & Experience fields
       applicationMethod,
-      externalApplyUrl: applicationMethod === 'external' ? externalApplyUrl.trim() : undefined,
+      externalApplyUrl: applicationMethod === 'external' ? externalApplyUrl.trim() : '',
       experienceLevelNum,
       jobStatus: 'OPEN',
       viewsCount: 0,
@@ -174,8 +177,16 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       postedBy: currentUser.id
     };
 
-    onAddJob(newJob);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onAddJob(newJob);
+      onClose();
+    } catch (err: any) {
+      console.error("Job posting error:", err);
+      setSubmitError(err?.message || "Failed to publish job posting to Firestore. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -241,7 +252,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Apex Media Group"
+                placeholder="e.g. Acme Media Group"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
@@ -432,11 +443,33 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
             )}
           </div>
 
+          {/* Error Alert */}
+          {submitError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-start gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold">Posting Error</p>
+                <p>{submitError}</p>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-bold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Send className="w-4 h-4" /> Publish Job Posting
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Publishing to Firestore...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>Publish Job Posting</span>
+              </>
+            )}
           </button>
 
         </form>

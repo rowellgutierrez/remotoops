@@ -253,6 +253,8 @@ export interface DirectMessage {
   senderAvatar: string;
   text: string;
   timestamp: string;
+  createdAt?: string;
+  read?: boolean;
 }
 
 export interface MentorshipModule {

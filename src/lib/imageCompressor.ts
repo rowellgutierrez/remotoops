@@ -17,16 +17,10 @@ export interface CompressionResult {
 
 export async function compressAndResizeImage(
   file: File,
-  maxDimension: number = 600,
-  quality: number = 0.82
+  maxDimension: number = 800,
+  quality: number = 0.85
 ): Promise<CompressionResult> {
-  // Wrap with strict 8-second timeout so it cannot hang the UI indefinitely
-  return Promise.race([
-    doCompress(file, maxDimension, quality),
-    new Promise<CompressionResult>((_, reject) =>
-      setTimeout(() => reject(new Error('Image processing timed out')), 8000)
-    )
-  ]);
+  return doCompress(file, maxDimension, quality);
 }
 
 async function doCompress(
@@ -134,7 +128,10 @@ function renderImageToBlob(
 ): Promise<CompressionResult> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Only set crossOrigin for external http(s) URLs, not local data URIs
+    if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+      img.crossOrigin = 'anonymous';
+    }
 
     img.onload = () => {
       try {
@@ -192,7 +189,10 @@ function renderImageToBlob(
       }
     };
 
-    img.onerror = () => reject(new Error('Failed to load image in renderImageToBlob'));
+    img.onerror = (e) => {
+      console.warn("[imageCompressor] Image load failed for renderImageToBlob:", e);
+      reject(new Error('Failed to load image in renderImageToBlob'));
+    };
     img.src = dataUrl;
   });
 }

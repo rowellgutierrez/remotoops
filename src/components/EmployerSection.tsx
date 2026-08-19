@@ -48,12 +48,11 @@ export const EmployerSection: React.FC<EmployerSectionProps> = ({
   const [statusToUpdate, setStatusToUpdate] = useState<Application['status']>('under_review');
   const [mentorNotes, setMentorNotes] = useState('');
 
-  // Filter jobs posted by this employer (or show all in demo if admin/employer)
+  // Filter jobs posted by this employer (or all if admin)
   const employerJobs = jobs.filter(j => {
-    if (!currentUser) return true;
+    if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
-    if (j.postedBy === currentUser.id || j.clientName === currentUser.name) return true;
-    return true; // Show demo jobs for employer
+    return j.postedBy === currentUser.id || j.employerId === currentUser.id || (currentUser.name && j.clientName === currentUser.name);
   });
 
   const employerApplications = applications.filter(app => {

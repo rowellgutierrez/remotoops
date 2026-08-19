@@ -65,18 +65,7 @@ export default function App() {
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [messages, setMessages] = useState<DirectMessage[]>([
-    {
-      id: 'msg-welcome',
-      conversationId: 'conv-1',
-      senderId: 'client-1',
-      receiverId: 'user-me',
-      senderName: 'Apex Global Hiring Team',
-      senderAvatar: '',
-      text: 'Hello! Thank you for applying through RemotoOps. We review remote applications within 24-48 hours.',
-      timestamp: 'Today at 10:00 AM'
-    }
-  ]);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
 
   // Auth State Listener with real-time Firestore profile sync
   useEffect(() => {
@@ -90,12 +79,13 @@ export default function App() {
 
       if (firebaseUser) {
         try {
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+
+          // Non-blocking background reload to update emailVerified if needed
+          firebaseUser.reload().catch((rErr) => console.warn("[App] User reload notice:", rErr));
+
           const idTokenResult = await firebaseUser.getIdTokenResult().catch(() => null);
           const isAdminClaim = idTokenResult?.claims?.admin === true;
-
-          await firebaseUser.reload().catch((rErr) => console.warn("[App] User reload notice:", rErr));
-
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
 
           unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
             if (userSnap.exists()) {
@@ -108,7 +98,8 @@ export default function App() {
                 name: userData.displayName || userData.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
                 email: firebaseUser.email || '',
                 role: isAdmin ? 'admin' : (userData.role === 'employer' || userData.role === 'client' ? 'client' : 'candidate'),
-                avatar: userData.avatar || '',
+                avatar: userData.avatar || userData.avatarUrl || userData.photoURL || firebaseUser.photoURL || '',
+                coverImage: userData.coverImage || userData.coverUrl || '',
                 headline: isAdmin ? 'RemotoOps Super Admin' : (userData.headline || 'Member'),
                 location: userData.location || 'Remote Worldwide',
                 phoneNumber: userData.phoneNumber,
@@ -125,6 +116,9 @@ export default function App() {
                 linkedinUrl: userData.linkedinUrl,
                 portfolioUrl: userData.portfolioUrl,
                 resumeUrl: userData.resumeUrl,
+                resumeFileName: userData.resumeFileName,
+                resumeStoragePath: userData.resumeStoragePath,
+                resumeUploadedAt: userData.resumeUploadedAt,
                 workExperience: userData.workExperience,
                 skills: userData.skills || [],
                 experiences: userData.experiences || [],
@@ -150,6 +144,8 @@ export default function App() {
                 name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member',
                 email: firebaseUser.email || '',
                 role: isAdmin ? 'admin' : 'candidate',
+                avatar: firebaseUser.photoURL || '',
+                coverImage: '',
                 headline: isAdmin ? 'RemotoOps Super Admin' : 'Jobseeker',
                 location: 'Remote Worldwide',
                 emailVerified: isVerified,
@@ -251,10 +247,61 @@ export default function App() {
       console.warn("[App] Applications listener error:", err);
     });
 
+    // 4. Real-time direct conversations & messages
+    const convQ = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', currentUser.id)
+    );
+
+    let messageUnsubscribers: (() => void)[] = [];
+
+    const unsubConversations = onSnapshot(convQ, (convSnap) => {
+      // Clean up previous message sub-listeners
+      messageUnsubscribers.forEach(u => u());
+      messageUnsubscribers = [];
+
+      if (convSnap.empty) {
+        setMessages([]);
+        return;
+      }
+
+      const allMessagesMap = new Map<string, DirectMessage>();
+
+      convSnap.forEach(convDoc => {
+        const convId = convDoc.id;
+        const msgQ = collection(db, 'conversations', convId, 'messages');
+        const unsubMsgs = onSnapshot(msgQ, (msgSnap) => {
+          msgSnap.forEach(mDoc => {
+            const mData = mDoc.data() as DirectMessage;
+            allMessagesMap.set(mDoc.id, {
+              id: mDoc.id,
+              conversationId: convId,
+              senderId: mData.senderId || '',
+              receiverId: mData.receiverId || '',
+              senderName: mData.senderName || 'User',
+              senderAvatar: mData.senderAvatar || '',
+              text: mData.text || '',
+              timestamp: mData.timestamp || mData.createdAt || 'Recent',
+              createdAt: mData.createdAt
+            });
+          });
+          setMessages(Array.from(allMessagesMap.values()));
+        }, (mErr) => {
+          console.warn(`[App] Messages sub-listener error for ${convId}:`, mErr);
+        });
+
+        messageUnsubscribers.push(unsubMsgs);
+      });
+    }, (err) => {
+      console.warn("[App] Conversations listener error:", err);
+    });
+
     return () => {
       unsubSaved();
       unsubSearches();
       unsubApps();
+      unsubConversations();
+      messageUnsubscribers.forEach(u => u());
     };
   }, [currentUser?.id, currentUser?.role]);
 
@@ -262,20 +309,28 @@ export default function App() {
   const handleAddJob = async (newJob: JobPost) => {
     if (!currentUser?.id) {
       setIsAuthModalOpen(true);
-      return;
+      throw new Error("Authentication required. Please sign in as an employer to post jobs.");
     }
 
-    const jobToSave: JobPost = {
+    const now = new Date().toISOString();
+    const rawJobData = {
       ...newJob,
       postedBy: currentUser.id,
-      postedDate: newJob.postedDate || 'Just now'
+      employerId: currentUser.id,
+      postedDate: newJob.postedDate || 'Just now',
+      createdAt: now,
+      updatedAt: now,
+      jobStatus: 'OPEN'
     };
 
+    // Sanitize any undefined properties so Firestore setDoc does not throw
+    const sanitizedJob = JSON.parse(JSON.stringify(rawJobData));
+
     try {
-      await setDoc(doc(db, 'job_posts', jobToSave.id), jobToSave, { merge: true });
-    } catch (err) {
+      await setDoc(doc(db, 'job_posts', newJob.id), sanitizedJob, { merge: true });
+    } catch (err: any) {
       console.error("Firestore job creation error:", err);
-      alert("Failed to save job to Firestore. Please verify your permissions and try again.");
+      throw new Error(err?.message || "Failed to publish job to Firestore database.");
     }
   };
 

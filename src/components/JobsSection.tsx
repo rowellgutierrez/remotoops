@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 
 import { uploadResumeFile } from '../lib/resumeUploader';
+import { db, doc, setDoc } from '../lib/firebase';
 
 interface JobsSectionProps {
   jobs: JobPost[];
@@ -178,10 +179,25 @@ export const JobsSection: React.FC<JobsSectionProps> = ({
       });
       setApplicantResumeUrl(uploadRes.url);
       setApplicantResumeFileName(uploadRes.fileName);
+
+      // Auto-save uploaded resume metadata to authenticated user's profile in Firestore
+      const now = new Date().toISOString();
+      try {
+        await setDoc(doc(db, 'users', currentUser.id), {
+          resumeUrl: uploadRes.url,
+          resumeFileName: uploadRes.fileName,
+          resumeStoragePath: uploadRes.storagePath,
+          resumeUploadedAt: now,
+          updatedAt: now
+        }, { merge: true });
+      } catch (profileErr) {
+        console.warn("Could not auto-save resume metadata to user profile doc:", profileErr);
+      }
     } catch (err: any) {
-      alert(err.message || "Failed to upload resume. Please check your file and try again.");
+      alert(`Resume Upload Failed: ${err?.message || err}`);
     } finally {
       setIsUploadingResume(false);
+      if (e.target) e.target.value = '';
     }
   };
 

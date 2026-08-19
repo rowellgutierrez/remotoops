@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserAccount } from '../types';
 import logoImg from '../assets/images/remotoops_logo.png';
 import { 
@@ -71,7 +71,12 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMobileSidebar
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const isEmployer = currentUser && (currentUser.role === 'client' || currentUser.role === 'employer' || currentUser.role === 'admin');
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentUser?.avatar]);
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 transition-colors">
@@ -94,12 +99,14 @@ export const Header: React.FC<HeaderProps> = ({
             }}
             className="flex items-center gap-2.5 cursor-pointer"
           >
-            <img 
-              src={logoImg} 
-              alt="RemotoOps" 
-              referrerPolicy="no-referrer"
-              className="w-10 h-10 rounded-xl object-cover border-2 border-indigo-500/30 shadow-xs" 
-            />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-xs p-0.5 flex items-center justify-center shrink-0">
+              <img 
+                src={logoImg} 
+                alt="RemotoOps" 
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain" 
+              />
+            </div>
             <span className="font-black text-lg text-slate-900 tracking-tight">RemotoOps</span>
           </div>
         </div>
@@ -154,9 +161,19 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center gap-2 p-1.5 pl-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all text-xs font-bold"
               >
-                <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                </div>
+                {currentUser.avatar && !avatarError ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    referrerPolicy="no-referrer"
+                    className="w-6 h-6 rounded-lg object-cover border border-slate-200 shrink-0"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
                 <span className="text-slate-800 hidden lg:inline max-w-[120px] truncate">{currentUser.name}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
