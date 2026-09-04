@@ -470,7 +470,7 @@ export default function App() {
       senderId,
       receiverId,
       senderName,
-      senderAvatar: currentUser?.avatarUrl || '',
+      senderAvatar: currentUser?.avatar || '',
       text,
       timestamp: 'Just now'
     };
@@ -496,7 +496,7 @@ export default function App() {
           senderId,
           receiverId,
           senderName,
-          senderAvatar: currentUser?.avatarUrl || '',
+          senderAvatar: currentUser?.avatar || '',
           text,
           createdAt: now,
           read: false
@@ -704,16 +704,14 @@ export default function App() {
           {activeTab === 'saved_searches' && (
             <SavedSearchesSection
               savedSearches={savedSearches}
-              onDeleteSearch={handleDeleteSavedSearch}
-              onRunSearch={(queryText) => {
-                setSearchQuery(queryText);
+              onAddSavedSearch={handleSaveSearch}
+              onDeleteSavedSearch={handleDeleteSavedSearch}
+              onExecuteSearch={(search) => {
+                setSearchQuery(search.query || '');
                 setActiveTab('find_jobs');
               }}
-              onOpenAuthModal={() => {
-                setAuthModalMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              isLoggedIn={!!currentUser}
+              onExploreJobs={() => setActiveTab('find_jobs')}
+              currentUser={currentUser}
             />
           )}
 
@@ -721,12 +719,9 @@ export default function App() {
           {activeTab === 'my_applications' && (
             <MyApplicationsSection
               applications={applications}
-              onOpenAuthModal={() => {
-                setAuthModalMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              isLoggedIn={!!currentUser}
-              onFindJobs={() => setActiveTab('find_jobs')}
+              onExploreJobs={() => setActiveTab('find_jobs')}
+              onOpenMessages={() => setActiveTab('messages')}
+              currentUser={currentUser}
             />
           )}
 

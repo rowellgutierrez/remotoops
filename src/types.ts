@@ -47,6 +47,8 @@ export interface UserEducation {
 export interface UserAccount {
   id: string;
   name: string;
+  displayName?: string;
+  photoURL?: string;
   email: string;
   role: 'candidate' | 'client' | 'admin' | 'jobseeker' | 'employer';
   avatar: string;
